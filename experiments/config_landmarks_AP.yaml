@@ -1,0 +1,38 @@
+common:
+    arch: GLNet
+    local_net: unet_dw
+    train_batch: 6
+    valid_batch: 6
+    lr: 0.02
+    epoch: 200
+    weight_decay: 0.0001
+    fp16: True
+    scheduler_lr: 'cycliclr'
+    cycliclr:
+        base_lr: 0.002
+        max_lr: 0.05
+        step_size_up: 50 # step_size_up = len(dataset)/batch_size * (2~10)
+        step_size_down: 50 # same as step_size_up
+        mode: 'triangular2'
+        cycle_momentum: false
+    save_path: /data/experiments/wrist-landmark/AP
+
+
+loss_config:
+    type: MaskBCELoss
+
+augmentation:
+    rotate_angle: 12
+    offset: [ 12,12 ]
+
+dataset:
+    W_size : 640
+    H_size : 1280
+    num_classes: 3
+    type: WristLandmarkMaskDataset
+
+    train_list: data/wrist_AP_train_list.txt
+    train_meta: data/wrist_AP_train_landmarks_list.txt
+    valid_list: data/wrist_AP_valid_list.txt
+    valid_meta: data/wrist_AP_valid_landmarks_list.txt
+    prefix: data/wrist_AP

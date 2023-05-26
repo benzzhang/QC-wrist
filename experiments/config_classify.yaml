@@ -1,0 +1,28 @@
+common:
+    arch: MobileNet_v2_onecls
+    train_batch: 10
+    valid_batch: 10
+    lr: 0.02
+    gamma: 0.1
+    epoch: 200
+    scheduler: [40, 70]
+    momentum: 0.9
+    weight_decay: 0.0001
+    save_path: /data/experiments/wrist-classify/AP+LAT
+
+augmentation:
+    rotate_angle: 10
+    offset: [16,16]
+
+dataset :
+    # The approximate size with the highest frequency in wrist-AP, W*H (960, 1920)
+    W_size : 960
+    H_size : 1920
+    num_classes: 2
+    type: XrayClassifyDataset
+
+    train_list: data/wrist_train_list.txt
+    train_meta: data/wrist_train_class_list.txt
+    valid_list: data/wrist_valid_list.txt
+    valid_meta: data/wrist_valid_class_list.txt
+    prefix: data/wrist
