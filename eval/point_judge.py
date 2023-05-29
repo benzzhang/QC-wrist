@@ -1,7 +1,7 @@
 '''
 Date: 2023-05-26 14:08:13
 LastEditors: zhangjian zhangjian@cecinvestment.com
-LastEditTime: 2023-05-26 16:05:24
+LastEditTime: 2023-05-29 11:17:37
 FilePath: /QC-wrist/eval/point_judge.py
 Description: TODO: 翻转图片到同一视角 --> 指掌关节位于左上角, 舟骨在上方
 
@@ -9,6 +9,56 @@ Description: TODO: 翻转图片到同一视角 --> 指掌关节位于左上角, 
 
 import math
 import numpy as np
+
+def flip_AP(p1, p2, p3, size):
+    if p2[1] < p1[1] and p3[1] < p1[1]:
+        if (p2[0]+p3[0])/2 < p1[0]:
+            p1[1] = size - p1[1]
+            p2[1] = size - p2[1]
+            p3[1] = size - p3[1]
+
+        if (p2[0]+p3[0])/2 > p1[0]:
+            p1 = (size[1]-p1[1], p1[0])
+            p2 = (size[1]-p2[1], p2[0])
+            p3 = (size[1]-p3[1], p3[0])
+            size = (size[1], size[0])
+
+    if p2[0] < p1[0] and p3[0] < p1[0]:
+        p1 = (p1[1], size[0]-p1[0])
+        p2 = (p2[1], size[0]-p2[0])
+        p3 = (p3[1], size[0]-p3[0])
+        size = (size[1], size[0])
+
+    return p1, p2, p3, size
+
+def flip_LAT(p1, p2, p3, p4, p5, size):
+    if p1[1]>p2[1] and p2[1]>p3[1]:
+        if (p2[1]-p3[1])>(size[1]*0.2):
+            p1[1] = size - p1[1]
+            p2[1] = size - p2[1]
+            p3[1] = size - p3[1]
+            p4[1] = size - p4[1]
+            p5[1] = size - p5[1]
+
+    if p1[0]<p2[0] and p2[0]<p3[0]:
+        if (p3[0]-p2[0])>(size[0]*0.2):
+            p1 = (size[1]-p1[1], p1[0])
+            p2 = (size[1]-p2[1], p2[0])
+            p3 = (size[1]-p3[1], p3[0])
+            p4 = (size[1]-p4[1], p4[0])
+            p5 = (size[1]-p5[1], p5[0])
+            size = (size[1], size[0])
+
+    if p1[0]>p2[0] and p2[0]>p3[0]:
+        if (p2[0]-p1[0])>(size[0]*0.2):
+            p1 = (p1[1], size[0]-p1[0])
+            p2 = (p2[1], size[0]-p2[0])
+            p3 = (p3[1], size[0]-p3[0])
+            p4 = (p4[1], size[0]-p4[0])
+            p5 = (p5[1], size[0]-p5[0])
+            size = (size[1], size[0])
+
+    return p1, p2, p3, p4, p5, size
 
 '''
     尺桡骨茎突连线中点位于图像正中，上下、左右差<1cm
@@ -49,7 +99,7 @@ def line_of_StyloidProcess_is_horizontal(p1, p2):
 '''
 def include_radius_ulna(p1, p2, pixelspacing, size):
     #TODO: 翻转图片到同一视角：指掌关节位于左上角
-
+    # units: cm
     midpoint = ( (p1[0]+p2[0])/2, (p1[1]+p2[1])/2 )
 
     distance_from_lowest = (size[1] - midpoint[1]) * pixelspacing[1] * 0.1
@@ -70,7 +120,7 @@ def include_radius_ulna(p1, p2, pixelspacing, size):
 '''
 def distance_from_StyloidProcess_to_edge(p1, p2, pixelspacing, size):
     #TODO: 翻转图片到同一视角：指掌关节位于左上角
-
+    # units: cm
     if p1[0] > p2[0]:
         l = p1
         r = p2

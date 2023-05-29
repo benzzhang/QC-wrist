@@ -1,7 +1,7 @@
 '''
 Date: 2023-05-26 16:10:41
 LastEditors: zhangjian zhangjian@cecinvestment.com
-LastEditTime: 2023-05-26 16:50:56
+LastEditTime: 2023-05-29 15:09:39
 FilePath: /QC-wrist/eval/chkmsg_judge.py
 Description: 
 '''
@@ -50,7 +50,7 @@ def basic_information_completed(dcmfile):
     return score
 
 '''
-    尺桡骨茎突连线与图像纵轴垂直, 角度90°±5以内°
+    辐射剂量(每次摄影不高于5mGy)
 '''
 def dose(dcmfile):
     

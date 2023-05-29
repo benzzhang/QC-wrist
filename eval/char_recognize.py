@@ -1,7 +1,7 @@
 '''
 Date: 2023-05-24 14:19:57
 LastEditors: zhangjian zhangjian@cecinvestment.com
-LastEditTime: 2023-05-24 15:49:55
+LastEditTime: 2023-05-29 17:43:06
 FilePath: /QC-wrist/eval/char_recognize.py
 Description: 
 '''
@@ -24,12 +24,13 @@ def is_position_mark(ori_img):
     template_L = '../tools/char-L.png'
 
     # 图像二值化, 闭运算, 取连通域, 逐个对比
-    # ori_img = cv2.imread(filename=src_img, flags=cv2.IMREAD_GRAYSCALE)
     _, th_img = cv2.threshold(ori_img, thresh=200, maxval=255, type=cv2.THRESH_BINARY)
 
     kernel = cv2.getStructuringElement(cv2.MORPH_RECT,(5, 5))
     close_img = cv2.morphologyEx(th_img, cv2.MORPH_CLOSE, kernel)
+    close_img = close_img.astype(np.uint8)
 
+    # cv2.connectedComponentsWithStats requires gray image
     ret, _, stats, _ = cv2.connectedComponentsWithStats(close_img, connectivity=4)
 
     if ret < 1:
@@ -50,7 +51,8 @@ def is_position_mark(ori_img):
         # elif position == 'L':
         acc2 = image_similarity(cv2.imread(filename=template_L, flags=cv2.IMREAD_GRAYSCALE),
                                            connected_component)
-        compared_res.append(acc2)
+        acc = max(acc1, acc2)
+        compared_res.append(acc)
 
     for acc in compared_res:
         if acc > 0.90:

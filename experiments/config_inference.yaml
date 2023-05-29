@@ -1,0 +1,20 @@
+dcmfile_path: ./inference_task
+
+arch_classify: MobileNet_v2_onecls
+arch_lanmarks: GLNet 
+local_net: unet_dw
+
+num_classes_classify: 2
+num_classes_AP: 3
+num_classes_LAT: 5 
+
+save_path_classify: /data/experiments/wrist-classify/AP+LAT
+save_path_AP: /data/experiments/wrist-landmark/AP
+save_path_LAT: /data/experiments/wrist-landmark/LAT
+
+size_classify: 
+  W: 960
+  H: 1920
+size_landmarks: 
+  W : 640
+  H : 1280
