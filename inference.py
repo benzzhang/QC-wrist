@@ -1,7 +1,7 @@
 '''
 Date: 2023-05-26 10:19:09
 LastEditors: zhangjian zhangjian@cecinvestment.com
-LastEditTime: 2023-05-30 16:31:38
+LastEditTime: 2023-05-30 17:44:20
 FilePath: /QC-wrist/inference.py
 Description: 
 '''
@@ -107,12 +107,11 @@ def inference(models, prending_list):
         '''
         result = (res_mark, res_clsaaify[0][0].item() > res_clsaaify[0][1].item(), get_landmarks_from_heatmap(res_landmark.squeeze().detach())) 
         res_list.append(result)
-
-
         '''
             code: landmark 推理部分结果可视化
             from here to "cv2.imwrite(str(time.time())+'test.png', img)"
         '''
+        
         img = df_tensor1.squeeze().cpu().numpy()[0, :, :]
         img = 255 * (img - np.min(img)) / (np.max(img) - np.min(img))
         img = img.astype(np.uint8)
@@ -136,11 +135,11 @@ def inference(models, prending_list):
         for idx, (y_pos, x_pos) in enumerate(result[2]):
             cv2.circle(img, (x_pos, y_pos), 3, ldm_color_list[idx], -1)
             cv2.putText(img, ldm_name_list[idx], (x_pos+10, y_pos-10), cv2.FONT_HERSHEY_COMPLEX, 0.6, ldm_color_list[idx], 1)   
-        cv2.imwrite(str(time.time())+'test.png', img)
-
+        cv2.imwrite(os.path.join('./inference_result', i.replace('dcm', 'png')), img)
+        
     return res_list
 
-def evaluate_each(dcmfile, coordinate):
+def evaluate_each(dcmfile, coordinate, score_dict):
     df = pydicom.read_file(dcmfile, force=True)
     ProtocolName = df.data_element('ProtocolName').value
     PixelSpacing = df.data_element('PixelSpacing').value
@@ -148,8 +147,15 @@ def evaluate_each(dcmfile, coordinate):
     
     df.file_meta.TransferSyntaxUID = pydicom.uid.ImplicitVRLittleEndian
     size = df.pixel_array.shape
+    '''
+        coordinate: (H, W) = (y, x)
+        size: (H, W) = (y, x)
+        'needed to reverse the mark'
+    '''
+    size = [size[1], size[0]]
+    for idx, point in enumerate(coordinate):
+        coordinate[idx] = [point[1], point[0]]
 
-    layout_score = None
     if ProtocolName == '腕关节正位' or len(coordinate) == 3:
         p1 = coordinate[0]
         p2 = coordinate[1]
@@ -157,12 +163,17 @@ def evaluate_each(dcmfile, coordinate):
 
         p1, p2, p3, size = flip_AP(p1, p2, p3, size)
 
-        layout_score = 0
-        layout_score += midpoint_of_StyloidProcess_is_center(p2, p3, PixelSpacing, size)
-        layout_score += line_of_StyloidProcess_is_horizontal(p2, p3)
-        layout_score += include_radius_ulna(p2, p3, PixelSpacing, size)
-        layout_score += distance_from_StyloidProcess_to_edge(p2, p3, PixelSpacing, size)
-
+        s1 = midpoint_of_StyloidProcess_is_center(p2, p3, PixelSpacing, size)
+        s2 = line_of_StyloidProcess_is_horizontal(p2, p3)
+        s3 = include_radius_ulna(p2, p3, PixelSpacing, size)
+        s4 = distance_from_StyloidProcess_to_edge(p2, p3, PixelSpacing, size)
+        layout_score = s1 + s2 + s3 + s4
+        
+        score_dict['尺桡骨茎突连线中点位于图像正中'] = s1
+        score_dict['尺桡骨茎突连线与图像纵轴垂直'] = s2
+        score_dict['下缘包含尺桡骨3-5cm'] = s3
+        score_dict['左右最外侧距影像边缘3-5cm'] = s4
+        
     if ProtocolName == '腕关节侧位' or len(coordinate) == 5:
         p1 = coordinate[0]
         p2 = coordinate[1]
@@ -172,13 +183,21 @@ def evaluate_each(dcmfile, coordinate):
 
         p1, p2, p3, p4, p5, size = flip_LAT(p1, p2, p3, p4, p5, size)
 
-        layout_score = 0
-        layout_score += Scaphoid_is_center(p1, PixelSpacing, size)
-        layout_score += line_of_LongAxis_is_vertical(p1, p3, p5)
+        s1 = Scaphoid_is_center(p1, PixelSpacing, size)
+        s2 = line_of_LongAxis_is_vertical(p1, p3, p5)
+        layout_score = s1 + s2
 
-    layout_score += basic_information_completed(df)
-    layout_score += dose(df)
-    return layout_score
+        score_dict['舟骨位于图像正中'] = s1
+        score_dict['腕关节长轴与影像长轴平行'] = s2
+
+    score_basic = basic_information_completed(df)
+    score_dose = dose(df)
+    layout_score = layout_score + score_basic + score_dose
+
+    score_dict['基本信息完整度'] = score_basic
+    score_dict['辐射剂量'] = score_dose
+
+    return layout_score, score_dict
 
 
 def main():
@@ -204,26 +223,35 @@ def main():
 
     res_dict = dict()
     for res, path in zip(res_inference, prending_list):
+        score_dict = dict()
+
         qualified_flag = True
         dcmfile = os.path.join(config['dcmfile_path'], path)
         if not res[0]:
             qualified_flag = False
+        score_dict['mark'] = qualified_flag
+
         if res[1]:
-            layout_score = 5
+            score = 5
         else:
-            layout_score = 10
-        layout_score += evaluate_each(dcmfile, res[2])
+            score = 10
+        score_dict['artifact'] = qualified_flag
+
+        layout_score, score_dict = evaluate_each(dcmfile, res[2], score_dict)
+        score += layout_score
 
         if qualified_flag:
-            res_dict[str(path)] = layout_score
+            res_dict[str(path)] = score
         else:
             res_dict[str(path)] = 0
 
-    import openpyxl
-    workbook = openpyxl.Workbook()
-    sheet = workbook.active
-    sheet.append(list(res_dict))
-    workbook.save('inference.xls')
+        res_dict['detail of '+str(path)] = score_dict
+    
+    import json
+    json_str = json.dumps(res_dict, ensure_ascii=False)
+    f = open('inference_result/inference.json', 'w')
+    f.write(json_str)
+    f.close()
     
     print('------------------- inference completed at {}-------------------'.format(time.strftime("%Y-%m-%d %X", time.localtime())))
 
