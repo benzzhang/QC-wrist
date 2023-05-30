@@ -1,15 +1,17 @@
 '''
 Date: 2023-05-26 14:08:13
 LastEditors: zhangjian zhangjian@cecinvestment.com
-LastEditTime: 2023-05-29 11:17:37
+LastEditTime: 2023-05-30 11:03:56
 FilePath: /QC-wrist/eval/point_judge.py
-Description: TODO: 翻转图片到同一视角 --> 指掌关节位于左上角, 舟骨在上方
+Description:
 
 '''
 
 import math
 import numpy as np
 
+
+# 翻转图片到同一视角 --> 指掌关节位于左上角, 舟骨在上方
 def flip_AP(p1, p2, p3, size):
     if p2[1] < p1[1] and p3[1] < p1[1]:
         if (p2[0]+p3[0])/2 < p1[0]:
@@ -67,8 +69,8 @@ def midpoint_of_StyloidProcess_is_center(p1, p2, pixelspacing, size):
     # midpoint: (x, y) = (w, h)
     midpoint = ( (p1[0]+p2[0])/2, (p1[1]+p2[1])/2 )
     # units: cm
-    gap_x = abs(size(0) - 2*midpoint[0]) * pixelspacing[0] * 0.1
-    gap_y = abs(size(1) - 2*midpoint[1]) * pixelspacing[1] * 0.1
+    gap_x = abs(size[0] - 2*midpoint[0]) * pixelspacing[0] * 0.1
+    gap_y = abs(size[1] - 2*midpoint[1]) * pixelspacing[1] * 0.1
     
     score = 0
     if gap_x < 1:
@@ -157,8 +159,8 @@ def distance_from_StyloidProcess_to_edge(p1, p2, pixelspacing, size):
 '''
 def Scaphoid_is_center(p1, pixelspacing, size):
     # units: cm
-    gap_x = abs(size(0) - 2*p1[0]) * pixelspacing[0] * 0.1
-    gap_y = abs(size(1) - 2*p1[1]) * pixelspacing[1] * 0.1
+    gap_x = abs(size[0] - 2*p1[0]) * pixelspacing[0] * 0.1
+    gap_y = abs(size[1] - 2*p1[1]) * pixelspacing[1] * 0.1
     
     score = 0
     if gap_x < 1:

@@ -1,7 +1,7 @@
 '''
 Date: 2023-05-26 10:19:09
 LastEditors: zhangjian zhangjian@cecinvestment.com
-LastEditTime: 2023-05-29 18:10:17
+LastEditTime: 2023-05-30 16:31:38
 FilePath: /QC-wrist/inference.py
 Description: 
 '''
@@ -38,9 +38,12 @@ def init_ai_quality_model():
                                                      local_net=config['local_net'])
     model_landmark_LAT = models.__dict__[config['arch_lanmarks']](num_classes=config['num_classes_LAT'],
                                                      local_net=config['local_net'])
-    model_classify.load_state_dict(torch.load(os.path.join(config['save_path_classify'], 'model_best.pth.tar'))['state_dict'], strict=False)
-    model_landmark_AP.load_state_dict(torch.load(os.path.join(config['save_path_AP'], 'model_best.pth.tar'))['state_dict'], strict=False)
-    model_landmark_LAT.load_state_dict(torch.load(os.path.join(config['save_path_LAT'], 'model_best.pth.tar'))['state_dict'], strict=False)
+    model_classify = torch.nn.DataParallel(model_classify)
+    model_landmark_AP = torch.nn.DataParallel(model_landmark_AP)
+    model_landmark_LAT = torch.nn.DataParallel(model_landmark_LAT)
+    model_classify.load_state_dict(torch.load(os.path.join(config['save_path_classify'], 'model_best.pth.tar'))['state_dict'], strict=True)
+    model_landmark_AP.load_state_dict(torch.load(os.path.join(config['save_path_AP'], 'model_best.pth.tar'))['state_dict'], strict=True)
+    model_landmark_LAT.load_state_dict(torch.load(os.path.join(config['save_path_LAT'], 'model_best.pth.tar'))['state_dict'], strict=True)
 
     use_cuda = torch.cuda.is_available()
     if use_cuda:
@@ -73,6 +76,11 @@ def inference(models, prending_list):
         resized_df0 = np.stack((resized_df0,) * 3, axis=-1)
         resized_df1 = np.stack((resized_df1,) * 3, axis=-1)
 
+        if np.max(resized_df1) > 1:
+            resized_df1 = (resized_df1 - 127.5) / 127.5
+        else:
+            resized_df1 = (resized_df1 - 0.5) * 2
+
         df_tensor0 = torch.FloatTensor(np.expand_dims(resized_df0.transpose((2, 0, 1)), 0))
         df_tensor1 = torch.FloatTensor(np.expand_dims(resized_df1.transpose((2, 0, 1)), 0))
 
@@ -97,8 +105,38 @@ def inference(models, prending_list):
         '''
             return: True/False, True/False, List
         '''
-        result = (res_mark, res_clsaaify[0][0].item() > res_clsaaify[0][1].item(), get_landmarks_from_heatmap(res_landmark.squeeze().detach()))
+        result = (res_mark, res_clsaaify[0][0].item() > res_clsaaify[0][1].item(), get_landmarks_from_heatmap(res_landmark.squeeze().detach())) 
         res_list.append(result)
+
+
+        '''
+            code: landmark 推理部分结果可视化
+            from here to "cv2.imwrite(str(time.time())+'test.png', img)"
+        '''
+        img = df_tensor1.squeeze().cpu().numpy()[0, :, :]
+        img = 255 * (img - np.min(img)) / (np.max(img) - np.min(img))
+        img = img.astype(np.uint8)
+        img = cv2.merge([img, img, img])
+
+        if len(result[2]) == 3:
+            # ['P1-拇指指掌关节', 'P2-桡骨茎突', 'P3-尺骨茎突']
+            ldm_name_list = ['P1-metacarpophalangeal joint', 
+                            'P2-styloid process of Radius', 
+                            'P3-styloid process of Ulna']
+            ldm_color_list = [(255, 0, 0), (0, 255, 0), (0, 0, 255)]
+        if len(result[2]) == 5:
+            # ['P1-舟骨中心', 'P2-桡骨远端中心', 'P3-桡骨近端中心', 'P4-尺骨远端中心', 'P5-尺骨近端中心']
+            ldm_name_list = ['P1-center of Scaphoid', 
+                            'P2-center of remote Radius', 
+                            'P3-center of proximal Radius', 
+                            'P4-center of remote Ulna', 
+                            'P5-center of proximal Ulna']
+            ldm_color_list = [(255, 0, 0), (0, 255, 0), (0, 0, 255), (255, 255, 0), (255, 0, 255)]
+
+        for idx, (y_pos, x_pos) in enumerate(result[2]):
+            cv2.circle(img, (x_pos, y_pos), 3, ldm_color_list[idx], -1)
+            cv2.putText(img, ldm_name_list[idx], (x_pos+10, y_pos-10), cv2.FONT_HERSHEY_COMPLEX, 0.6, ldm_color_list[idx], 1)   
+        cv2.imwrite(str(time.time())+'test.png', img)
 
     return res_list
 
@@ -106,7 +144,10 @@ def evaluate_each(dcmfile, coordinate):
     df = pydicom.read_file(dcmfile, force=True)
     ProtocolName = df.data_element('ProtocolName').value
     PixelSpacing = df.data_element('PixelSpacing').value
-    size = df.pixel_array.size
+    PixelSpacing = [float(PixelSpacing._list[0]),float(PixelSpacing._list[1])]
+    
+    df.file_meta.TransferSyntaxUID = pydicom.uid.ImplicitVRLittleEndian
+    size = df.pixel_array.shape
 
     layout_score = None
     if ProtocolName == '腕关节正位' or len(coordinate) == 3:
@@ -114,7 +155,7 @@ def evaluate_each(dcmfile, coordinate):
         p2 = coordinate[1]
         p3 = coordinate[2]
 
-        p1, p2, p3 = flip_AP(p1, p2, p3, size)
+        p1, p2, p3, size = flip_AP(p1, p2, p3, size)
 
         layout_score = 0
         layout_score += midpoint_of_StyloidProcess_is_center(p2, p3, PixelSpacing, size)
@@ -129,7 +170,7 @@ def evaluate_each(dcmfile, coordinate):
         p4 = coordinate[3]
         p5 = coordinate[4]
 
-        p1, p2, p3, p4, p5 = flip_LAT(p1, p2, p3, p4, p5, size)
+        p1, p2, p3, p4, p5, size = flip_LAT(p1, p2, p3, p4, p5, size)
 
         layout_score = 0
         layout_score += Scaphoid_is_center(p1, PixelSpacing, size)

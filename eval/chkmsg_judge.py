@@ -1,7 +1,7 @@
 '''
 Date: 2023-05-26 16:10:41
 LastEditors: zhangjian zhangjian@cecinvestment.com
-LastEditTime: 2023-05-29 15:09:39
+LastEditTime: 2023-05-30 14:35:32
 FilePath: /QC-wrist/eval/chkmsg_judge.py
 Description: 
 '''
@@ -27,7 +27,8 @@ def basic_information_completed(dcmfile):
     completed2 = [
                 dcmfile.data_element('StudyDate').value != None,
                 dcmfile.data_element('StudyTime').value != None,
-                dcmfile.data_element('曝光次数/(图像数)').value != None,]
+                # dcmfile.data_element('曝光次数/(图像数)').value != None,
+                ]
     completed3 = [
                 dcmfile.data_element('InstitutionName').value != None,
                 dcmfile.data_element('Manufacturer').value != None,
@@ -36,7 +37,8 @@ def basic_information_completed(dcmfile):
     completed4 = [
                 dcmfile.data_element('KVP').value != None,
                 dcmfile.data_element('DistanceSourceToDetector').value != None,
-                dcmfile.data_element('电离室').value != None,]
+                # dcmfile.data_element('电离室').value != None,
+                ]
     completed5 = [
                 dcmfile.data_element('PixelSpacing').value != None,
                 dcmfile.data_element('WindowWidth').value != None,

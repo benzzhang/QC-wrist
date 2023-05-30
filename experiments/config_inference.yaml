@@ -18,3 +18,7 @@ size_classify:
 size_landmarks: 
   W : 640
   H : 1280
+
+type: WristLandmarkMaskInferenceDataset
+prefix: inference_task/
+inference_batch: 4
