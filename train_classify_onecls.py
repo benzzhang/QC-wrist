@@ -3,7 +3,7 @@
 @Init Date  : 2023-05-17 13:57
 @File       : train_classify.py
 @IDE        : PyCharm
-@Description: 
+@Description: Binary classification model, using DATASET 'XrayClassifyDataset'
 '''
 import os
 import shutil

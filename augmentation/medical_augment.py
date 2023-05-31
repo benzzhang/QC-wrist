@@ -11,8 +11,8 @@ def XrayTrainTransform(img_size=256, crop_size=224):
    return A.Compose([
        # A.Resize(img_size, img_size),
        A.ShiftScaleRotate(shift_limit=0.02, scale_limit=0.05, rotate_limit=90),
-       A.VerticalFlip(p=0.3),
-       A.HorizontalFlip(p=0.3),
+       A.VerticalFlip(p=0.5),
+       A.HorizontalFlip(p=0.5),
        A.RandomBrightnessContrast(p=0.2),
    ])
 

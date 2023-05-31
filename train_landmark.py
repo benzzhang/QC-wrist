@@ -1,9 +1,10 @@
 '''
 Date: 2023-04-21 10:52:12
 LastEditors: zhangjian zhangjian@cecinvestment.com
-LastEditTime: 2023-05-30 15:07:32
+LastEditTime: 2023-05-31 11:39:31
 FilePath: /QC-wrist/train_landmark.py
 Description: Copyright (c) Pengbo, 2022
+            Landmarks detection model, using DATASET 'WristLandmarkMaskDataset'
 '''
 
 import os

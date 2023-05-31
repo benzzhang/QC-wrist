@@ -6,13 +6,9 @@
 @Description: 
 '''
 # encoding: utf8
-import matplotlib.pyplot as plt
 import torch
-import torchvision
-import torchvision.transforms as transforms
 import numpy as np
 from .misc import *
-import pdb
 import cv2
 
 img_size = 512

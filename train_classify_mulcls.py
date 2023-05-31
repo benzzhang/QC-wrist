@@ -1,9 +1,9 @@
 '''
 Date: 2023-04-21 10:52:11
 LastEditors: zhangjian zhangjian@cecinvestment.com
-LastEditTime: 2023-05-23 17:42:23
+LastEditTime: 2023-05-31 11:37:34
 FilePath: /QC-wrist/train_classify_mulcls.py
-Description: 
+Description: Multi classification model
 '''
 import os
 import shutil

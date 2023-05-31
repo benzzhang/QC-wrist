@@ -1,7 +1,7 @@
 '''
 Date: 2023-05-26 10:19:09
 LastEditors: zhangjian zhangjian@cecinvestment.com
-LastEditTime: 2023-05-30 17:44:20
+LastEditTime: 2023-05-31 11:06:59
 FilePath: /QC-wrist/inference.py
 Description: 
 '''
@@ -9,24 +9,18 @@ Description:
 import os
 import yaml
 import os
-import shutil
 import time
 import yaml
 import numpy as np
 import pydicom
-
 import torch
-import torch.utils.data as data
-import torch.optim as optim
-from torch.utils.data.dataloader import default_collate
+import cv2
 
 import models
-import dataset
-from utils import Logger, AverageMeter, mkdir_p, progress_bar, visualize_heatmap, get_landmarks_from_heatmap
+from utils import get_landmarks_from_heatmap
 from eval import is_position_mark, flip_AP, flip_LAT, midpoint_of_StyloidProcess_is_center, line_of_LongAxis_is_vertical,\
 include_radius_ulna, distance_from_StyloidProcess_to_edge, Scaphoid_is_center, line_of_StyloidProcess_is_horizontal, basic_information_completed, dose
-import losses
-import cv2
+
 
 def init_ai_quality_model():
     '''
@@ -142,17 +136,22 @@ def inference(models, prending_list):
 def evaluate_each(dcmfile, coordinate, score_dict):
     df = pydicom.read_file(dcmfile, force=True)
     ProtocolName = df.data_element('ProtocolName').value
-    PixelSpacing = df.data_element('PixelSpacing').value
-    PixelSpacing = [float(PixelSpacing._list[0]),float(PixelSpacing._list[1])]
     
     df.file_meta.TransferSyntaxUID = pydicom.uid.ImplicitVRLittleEndian
     size = df.pixel_array.shape
+
+    PixelSpacing = df.data_element('PixelSpacing').value
+    PixelSpacing = [float(PixelSpacing._list[0]),float(PixelSpacing._list[1])]
+    PixelSpacing = [PixelSpacing[0] * (size[0] / config['size_landmarks']['H']), PixelSpacing[1] * (size[1] / config['size_landmarks']['W'])]
+
     '''
+        PixelSpacing: (H, W) = (y, x)
         coordinate: (H, W) = (y, x)
         size: (H, W) = (y, x)
-        'needed to reverse the mark'
+        'needed to reverse them'
     '''
     size = [size[1], size[0]]
+    PixelSpacing = [PixelSpacing[1], PixelSpacing[0]]
     for idx, point in enumerate(coordinate):
         coordinate[idx] = [point[1], point[0]]
 
@@ -218,7 +217,7 @@ def main():
     '''
         获取待推理影像列表
     '''
-    prending_list = os.listdir(config['dcmfile_path'])
+    prending_list = [f for f in os.listdir(config['dcmfile_path']) if not f.startswith('.')]
     res_inference = inference(models, prending_list)
 
     res_dict = dict()

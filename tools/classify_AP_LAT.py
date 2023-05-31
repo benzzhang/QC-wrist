@@ -1,9 +1,13 @@
 '''
 Date: 2023-04-21 10:51:19
 LastEditors: zhangjian zhangjian@cecinvestment.com
-LastEditTime: 2023-05-18 14:15:50
+LastEditTime: 2023-05-31 11:34:59
 FilePath: /QC-wrist/tools/classify_AP_LAT.py
 Description: 
+    Classify and save files from the DCM folder obtained from the hospital to a specific folder according to 'ProtocolName'
+    
+    [files_from_hos] -> [wrist_data_dcm/wrist_AP]
+                     -> [wrist_data_dcm/wrist_LAT]
 '''
 import os
 import shutil

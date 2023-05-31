@@ -1,9 +1,18 @@
 '''
 Author: Peng Bo
 Date: 2022-04-27 16:09:11
-LastEditTime: 2022-05-21 18:42:10
-Description:
+LastEditTime: 2023-05-31 11:43:46
+Description: 
 
+@inproceedings{zhu2021you,
+  title={You only Learn Once: Universal Anatomical Landmark Detection},
+  author={Zhu, Heqin and Yao, Qingsong and Xiao, Li and Zhou, S. Kevin},
+  booktitle={International Conference on Medical Image Computing and Computer-Assisted Intervention},
+  pages={85--95},
+  year={2021},
+  organization={Springer}
+}
+    reference: https://github.com/MIRACLE-Center/YOLO_Universal_Anatomical_Landmark_Detection
 '''
 
 import torch

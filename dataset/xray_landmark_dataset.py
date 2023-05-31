@@ -13,7 +13,8 @@ import math
 import torch
 from torch.utils.data import Dataset
 
-from .util import gaussianHeatmap, rotate, translate
+from util import gaussianHeatmap, rotate, translate
+import albumentations as A
 
 __all__ = ['WristLandmarkMaskDataset']
 
@@ -28,11 +29,10 @@ class WristLandmarkMaskDataset(Dataset):
         # read img_list and metas
         self.img_list = [l.strip() for l in open(img_list).readlines()]
         self.img_data_list = self.__readAllData__()
-        # self.idx_of_lms = list(range(14)) + list(range(20, 26)) # 取部分points用
+        # self.idx_of_lms = list(range(14)) + list(range(20, 26)) # Select a section of points to use
         self.idx_of_lms = list(range(3))
         self.lms_list = [[float(i) for i in v.strip().split(' ')] for v in open(meta).readlines()]
         self.genHeatmap = gaussianHeatmap(sigma, dim=len(size))
-
 
     def __readAllData__(self):
         img_data_list = []
@@ -54,20 +54,34 @@ class WristLandmarkMaskDataset(Dataset):
 
     def __getitem__(self, index):
         img_name = self.img_list[index].strip()
-        origin_img = self.img_data_list[index]
-        img_size = list(origin_img.shape)
-        img = cv2.cvtColor(origin_img, cv2.COLOR_GRAY2RGB)
+        img = self.img_data_list[index]
+        img_size = list(img.shape)
         '''
             .shape return: (height, width)
         '''
-        h, w, _ = img.shape
-        img = img.transpose((2, 0, 1))
+        h, w = img.shape
         # get the heatmap of landmark in image
         lms = self.lms_list[index]
-        lms = [(int(lms[i] * h), int(lms[i + 1] * w)) for i in range(0, int(len(lms)), 2)]
+        lms = [[int(lms[i] * h), int(lms[i + 1] * w)] for i in range(0, int(len(lms)), 2)]
         # lms = [lms[idx] for idx in self.idx_of_lms] # 取部分points用
-        lms_heatmap = [self.genHeatmap((x, y), (h, w)) for (x, y) in lms]
-        lms_heatmap = np.array(lms_heatmap)
+        lms_heatmap = [self.genHeatmap((x, y), (h, w)) for [x, y] in lms]
+        lms_heatmap = np.array(lms_heatmap).transpose((1, 2, 0))
+
+        # VerticalFlip
+        if np.random.rand() != 100:
+            VerticalFlip0 = A.VerticalFlip(always_apply=False, p=1)(image=img)
+            VerticalFlip1 = A.VerticalFlip(always_apply=False, p=1)(image=lms_heatmap)
+            img = VerticalFlip0['image']
+            lms_heatmap = VerticalFlip1['image']
+            lms = [[h-lms[i][0], lms[i][1]] for i in range(len(lms))]
+
+        # HorizontalFlip
+        if np.random.rand() != 100:
+            HorizontalFlip0 = A.HorizontalFlip(always_apply=False, p=1)(image=img)
+            HorizontalFlip1 = A.HorizontalFlip(always_apply=False, p=1)(image=lms_heatmap)
+            img = HorizontalFlip0['image']
+            lms_heatmap = HorizontalFlip1['image']
+            lms = [[lms[i][0], w-lms[i][1]] for i in range(len(lms))]
 
         # get rotate positions
         def lms_rotate(points_list, center, angle):
@@ -131,7 +145,10 @@ class WristLandmarkMaskDataset(Dataset):
             if translate_pos[i][1] > img_size[1] or translate_pos[i][1] < 0:
                 lms_mask[i] = 0
                 continue
-
+        
+        img = cv2.cvtColor(img, cv2.COLOR_GRAY2RGB)
+        img = img.transpose((2, 0, 1))
+        lms_heatmap = lms_heatmap.transpose((2, 0, 1))
         return torch.FloatTensor(img), torch.FloatTensor(lms_heatmap), torch.FloatTensor(lms_mask), img_name
 
     def __len__(self):
@@ -147,11 +164,11 @@ if __name__ == "__main__":
     img_list = 'data/wrist_AP_valid_list.txt'
     meta = 'data/wrist_AP_valid_landmarks_list.txt'
 
-    transform_paras = {'rotate_angle': 30, 'offset': [50, 10]}
+    transform_paras = {'rotate_angle': 30, 'offset': [30, 30]}
     wrist_dataset = WristLandmarkMaskDataset(img_list, meta, transform_paras, prefix, size=(960, 1920))
 
     for i in range(wrist_dataset.__len__()):
-        image, lms_heatmap, lms_mask = wrist_dataset.__getitem__(i)
+        image, lms_heatmap, lms_mask, img_name = wrist_dataset.__getitem__(i)
         image, lms_heatmap = image.numpy(), lms_heatmap.numpy()
         print(f'max: {np.max(image)}, min:{np.min(image)}, mean:{np.mean(image)}')
 

@@ -1,3 +1,5 @@
 *.png
 *.json
 *.dcm
+!char-L.png
+!char-R.png

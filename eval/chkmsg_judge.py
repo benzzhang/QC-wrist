@@ -1,15 +1,9 @@
 '''
 Date: 2023-05-26 16:10:41
 LastEditors: zhangjian zhangjian@cecinvestment.com
-LastEditTime: 2023-05-30 14:35:32
+LastEditTime: 2023-05-31 10:56:35
 FilePath: /QC-wrist/eval/chkmsg_judge.py
 Description: 
-'''
-
-import math
-import numpy as np
-
-'''
     4分, 受检者基本信息是否完整? 包含ID号(唯一性)、姓名、性别、出生日期、年龄
     4分, 检查基本信息是否完整? 包含检查日期、检查时间、曝光次数/(图像数) 
     4分, 检查设备基本信息是否完整? 包含执行医院名称、设备生产商、设备型号、软件版本号
