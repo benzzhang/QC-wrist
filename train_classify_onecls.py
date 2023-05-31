@@ -102,6 +102,28 @@ def main(config_file):
         momentum=common_config['momentum'],
         weight_decay=common_config['weight_decay'])
 
+    if args.visualize:
+        checkpoints = torch.load(os.path.join(common_config['save_path'], 'model_best.pth.tar'))
+        model.load_state_dict(checkpoints['state_dict'], False)
+        valid_loss, valid_acc, valid_sens, valid_spec, valid_prec = vaild(validloader, model, criterion, use_cuda)
+
+        save_folder = os.path.join(common_config['save_path'], 'results/')
+        if not os.path.exists(save_folder):
+            os.makedirs(save_folder)
+        save_path = os.path.join(save_folder, 'inference_results.txt')
+
+        with open(save_path, 'a') as f:
+            f.write(time.strftime('%Y-%m-%d %H:%M:%S') + '\n')
+            f.write('loss: %.4f' %(valid_loss) + '\n')
+            f.write('accuracy: %.4f' %(valid_acc) + '\n')
+            f.write('sensitivity: %.4f' %(valid_sens) + '\n')
+            f.write('specificity: %.4f' %(valid_spec) + '\n')
+            f.write('precision: %.4f' %(valid_prec) + '\n')
+            f.write('F1: %.4f' %(2*valid_prec*valid_sens/(valid_prec+valid_sens)) + '\n')
+            f.write('━━●●━━━━━━━━━━━━━' + '\n')
+
+        return
+
     # logger
     title = 'Wrist X-ray Image Quality Assessment using ' + common_config['arch']
     logger = Logger(os.path.join(common_config['save_path'], 'log.txt'), title=title)
@@ -113,7 +135,7 @@ def main(config_file):
 
         print('\nEpoch: [%d | %d] LR: %f' % (epoch + 1, common_config['epoch'], common_config['lr']))
         train_loss, train_acc = train(trainloader, model, criterion, optimizer, use_cuda)
-        valid_loss, valid_acc = vaild(validloader, model, criterion, use_cuda)
+        valid_loss, valid_acc, _, _, _ = vaild(validloader, model, criterion, use_cuda)
         # append logger file
         logger.append([common_config['lr'], train_loss, valid_loss, train_acc, valid_acc])
         # save model
@@ -179,7 +201,10 @@ def vaild(validloader, model, criterion, use_cuda):
 
     batch_time = AverageMeter()
     losses = AverageMeter()
-    acc = AverageMeter()
+    acc = AverageMeter()    # accuracy:    (TP+TN)/(TP+TN+FP+FN)
+    sens = AverageMeter()   # sensitivity: TP/(TP+FN) <==> recall
+    spec = AverageMeter()   # specificity: TP/(FP+TN)
+    prec = AverageMeter()   # precision:   TP/(TP+FP)
     end = time.time()
 
     for batch_idx, (inputs, targets) in enumerate(validloader):
@@ -197,18 +222,28 @@ def vaild(validloader, model, criterion, use_cuda):
         loss = criterion(outputs, targets)
 
         predict = outputs > 0.5
-        predict_res = [torch.equal(a, b) for a, b in zip(predict, targets)]
+        predict_acc = [torch.equal(a, b) for a, b in zip(predict, targets)]
+        predict_sens = [torch.equal(a, b) for a, b in zip(predict, targets) if torch.equal(b, torch.FloatTensor([1., 0.]).cuda())]
+        predict_spec = [torch.equal(a, b) for a, b in zip(predict, targets) if torch.equal(b, torch.FloatTensor([0., 1.]).cuda())]
+        predict_prec = [torch.equal(a, b) for a, b in zip(predict, targets) if torch.equal(a, torch.FloatTensor([1., 0.]).cuda())]
+        # print(len(predict_sens), len(predict_spec), len(predict_prec))
 
         losses.update(loss.item(), inputs.size(0))
-        acc.update(sum(predict_res) / len(predict_res), len(predict_res))
-
+        acc.update(sum(predict_acc) / len(predict_acc), len(predict_acc))
+        if len(predict_sens) != 0:
+            sens.update(sum(predict_sens) / len(predict_sens), len(predict_sens))
+        if len(predict_spec) != 0:
+            spec.update(sum(predict_spec) / len(predict_spec), len(predict_spec))
+        if len(predict_prec) != 0:
+            prec.update(sum(predict_prec) / len(predict_prec), len(predict_prec))
+        
         progress_bar(batch_idx, len(validloader), 'Loss: %.2f | Acc: %.2f' % (losses.avg, acc.avg))
 
         # measure elapsed time
         batch_time.update(time.time() - end)
         end = time.time()
 
-    return (losses.avg, acc.avg)
+    return (losses.avg, acc.avg, sens.avg, spec.avg, prec.avg)
 
 
 def save_checkpoint(state, is_best, save_path, filename='checkpoint.pth.tar'):
@@ -234,7 +269,8 @@ if __name__ == '__main__':
     # parser.add_argument('--config-file', type=str, default='experiments/config_classify_AP.yaml')
     # parser.add_argument('--config-file', type=str, default='experiments/config_classify_LAT.yaml')
     parser.add_argument('--config-file', type=str, default='experiments/config_classify.yaml')
-    parser.add_argument('--gpu-id', type=str, default='1,2,3')
+    parser.add_argument('--gpu-id', type=str, default='1,2')
+    parser.add_argument('--visualize', action='store_false')
     args = parser.parse_args()
     os.environ["CUDA_VISIBLE_DEVICES"] = args.gpu_id
     main(args.config_file)

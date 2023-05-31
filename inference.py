@@ -1,7 +1,7 @@
 '''
 Date: 2023-05-26 10:19:09
 LastEditors: zhangjian zhangjian@cecinvestment.com
-LastEditTime: 2023-05-31 11:06:59
+LastEditTime: 2023-05-31 15:47:48
 FilePath: /QC-wrist/inference.py
 Description: 
 '''
@@ -102,7 +102,7 @@ def inference(models, prending_list):
         result = (res_mark, res_clsaaify[0][0].item() > res_clsaaify[0][1].item(), get_landmarks_from_heatmap(res_landmark.squeeze().detach())) 
         res_list.append(result)
         '''
-            code: landmark 推理部分结果可视化
+            code: landmark 推理结果可视化
             from here to "cv2.imwrite(str(time.time())+'test.png', img)"
         '''
         
@@ -215,7 +215,7 @@ def main():
     models = init_ai_quality_model()
 
     '''
-        获取待推理影像列表
+        Obtain a list of files to be inferred
     '''
     prending_list = [f for f in os.listdir(config['dcmfile_path']) if not f.startswith('.')]
     res_inference = inference(models, prending_list)

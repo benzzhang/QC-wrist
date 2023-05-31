@@ -1,7 +1,7 @@
 '''
 Date: 2023-04-21 10:52:12
 LastEditors: zhangjian zhangjian@cecinvestment.com
-LastEditTime: 2023-05-31 11:39:31
+LastEditTime: 2023-05-31 16:36:43
 FilePath: /QC-wrist/train_landmark.py
 Description: Copyright (c) Pengbo, 2022
             Landmarks detection model, using DATASET 'WristLandmarkMaskDataset'
@@ -33,12 +33,6 @@ def main(config_file):
 
     if not os.path.isdir(common_config['save_path']):
         mkdir_p(common_config['save_path'])
-
-    # logger
-    title = 'Wrist landamrks detection using' + common_config['arch']
-    logger = Logger(os.path.join(
-        common_config['save_path'], 'log.txt'), title=title)
-    logger.set_names(['Learning Rate', 'Avg-Train Loss', 'Avg-Valid Loss', 'Epoch-Train Loss', 'Epoch-Valid Loss'])
 
     # initial dataset and dataloader
     augment_config = config['augmentation']
@@ -111,6 +105,11 @@ def main(config_file):
                 f.write(i+'\n')
 
         return
+
+    # logger
+    title = 'Wrist landamrks detection using' + common_config['arch']
+    logger = Logger(os.path.join(common_config['save_path'], 'log.txt'), title=title)
+    logger.set_names(['Learning Rate', 'Avg-Train Loss', 'Avg-Valid Loss', 'Epoch-Train Loss', 'Epoch-Valid Loss'])
 
     # Creates a GradScaler once at the beginning of training.
     scaler = torch.cuda.amp.GradScaler(enabled=True) if config['common']['fp16'] == True else None
