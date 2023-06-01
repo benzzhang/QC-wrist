@@ -1,7 +1,7 @@
 '''
 Date: 2023-04-21 10:52:12
 LastEditors: zhangjian zhangjian@cecinvestment.com
-LastEditTime: 2023-06-01 14:54:21
+LastEditTime: 2023-06-01 17:35:31
 FilePath: /QC-wrist/train_landmark.py
 Description: Copyright (c) Pengbo, 2022
             Landmarks detection model, using DATASET 'WristLandmarkMaskDataset'
@@ -17,6 +17,7 @@ import torch
 import torch.utils.data as data
 import torch.optim as optim
 from torch.utils.data.dataloader import default_collate
+from matplotlib import pyplot as plt  
 
 import models
 import dataset
@@ -116,6 +117,7 @@ def main(config_file):
     scaler = torch.cuda.amp.GradScaler(enabled=True) if config['common']['fp16'] == True else None
     best_loss = float('inf')
     # Train and val
+    train_loss_list, valid_loss_list = [], []
     for epoch in range(common_config['epoch']):
         lr = scheduler.get_last_lr()[0]
         print('\nEpoch: [%d | %d] LR: %f' %(epoch + 1, common_config['epoch'], lr))
@@ -133,7 +135,21 @@ def main(config_file):
             'best_loss': best_loss,
             'optimizer': optimizer.state_dict(),
         }, is_best, save_path=common_config['save_path'])
+        train_loss_list.append(train_loss)
+        valid_loss_list.append(valid_loss)
 
+    def draw(train, valid):
+        x = np.linspace(0,len(train),len(valid))  
+        plt.plot(x,train,label="train_loss",linewidth=1.5)  
+        plt.plot(x,valid,label="test_loss",linewidth=1.5)  
+        plt.xlabel("epoch")  
+        plt.ylabel("loss")  
+        plt.legend()  
+        plt.savefig(os.path.join(save_folder, 'loss_'+time.strftime('%Y-%m-%d_%H:%M:%S')+'.png'),
+                     dpi=400,
+                     bbox_inches='tight')
+        
+    draw(train_loss_list, valid_loss_list)
     print('Best loss:' + str(best_loss))
     logger.close(best_loss)
 
@@ -185,8 +201,6 @@ def train(trainloader, model, criterion, optimizer, use_cuda, scaler=None, sched
 
         losses.update(loss.item(), inputs.size(0))
         progress_bar(batch_idx, len(trainloader), 'Loss: %.2f' % (losses.avg))
-        # if scheduler != None:
-        #     scheduler.step(batch_idx)
 
         # measure elapsed time
         batch_time.update(time.time() - end)
