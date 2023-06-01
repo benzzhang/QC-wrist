@@ -1,7 +1,7 @@
 '''
 Author: Peng Bo
 Date: 2022-04-27 16:09:11
-LastEditTime: 2023-05-31 11:43:46
+LastEditTime: 2023-06-01 15:14:01
 Description: 
 
 @inproceedings{zhu2021you,
@@ -62,7 +62,7 @@ class globalNet(nn.Module):
     def forward(self, x):
         size = x.size()[2:]
         sf = self.scale_factor
-        x = F.interpolate(x, scale_factor=sf)
+        x = F.interpolate(x, scale_factor=sf, recompute_scale_factor=True)
 
         x = self.in_conv(x)
         x = self.dilated_conv(x)

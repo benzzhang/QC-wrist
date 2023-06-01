@@ -1,7 +1,7 @@
 '''
 Date: 2023-04-21 10:52:12
 LastEditors: zhangjian zhangjian@cecinvestment.com
-LastEditTime: 2023-05-31 16:36:43
+LastEditTime: 2023-06-01 14:54:21
 FilePath: /QC-wrist/train_landmark.py
 Description: Copyright (c) Pengbo, 2022
             Landmarks detection model, using DATASET 'WristLandmarkMaskDataset'
@@ -23,6 +23,7 @@ import dataset
 from utils import Logger, AverageMeter, mkdir_p, progress_bar, visualize_heatmap, get_landmarks_from_heatmap
 import losses
 import cv2
+import pydicom
 
 
 def main(config_file):
@@ -120,6 +121,7 @@ def main(config_file):
         print('\nEpoch: [%d | %d] LR: %f' %(epoch + 1, common_config['epoch'], lr))
         train_loss, ep_train_loss = train(trainloader, model, criterion, optimizer, use_cuda, scaler, scheduler)
         valid_loss, ep_valid_loss, _, _ = valid(validloader, model, criterion, use_cuda, common_config, scaler, args.visualize)
+        scheduler.step()
         is_best = valid_loss < best_loss
         best_loss = min(valid_loss, best_loss)
 
@@ -183,8 +185,8 @@ def train(trainloader, model, criterion, optimizer, use_cuda, scaler=None, sched
 
         losses.update(loss.item(), inputs.size(0))
         progress_bar(batch_idx, len(trainloader), 'Loss: %.2f' % (losses.avg))
-        if scheduler != None:
-            scheduler.step(batch_idx)
+        # if scheduler != None:
+        #     scheduler.step(batch_idx)
 
         # measure elapsed time
         batch_time.update(time.time() - end)
@@ -202,7 +204,7 @@ def valid(validloader, model, criterion, use_cuda, common_config, scaler=None, v
     end = time.time()
     landmarks_list = []
     names_list = []
-
+    radial_error = []
     for batch_idx, datas in enumerate(validloader):
         (inputs, targets, masks), names = datas
         if use_cuda:
@@ -228,11 +230,29 @@ def valid(validloader, model, criterion, use_cuda, common_config, scaler=None, v
                 os.makedirs(save_folder)
             for i in range(inputs.size(0)):
                 landmarks = get_landmarks_from_heatmap(outputs[i].detach())
-                visualize_img = visualize_heatmap(inputs[i], landmarks)
-                save_path = os.path.join(save_folder, str(batch_idx * inputs.size(0) + i) + '.png')
+                # calculate 'mean radial error' (MRE) and 'successful detection rates' (SDR)
+                landmarks_gt = get_landmarks_from_heatmap(targets[i].detach())
+
+                visualize_img = visualize_heatmap(inputs[i], landmarks, landmarks_gt)
+                save_path = os.path.join(save_folder, names[i])
                 cv2.imwrite(save_path, visualize_img)
                 landmarks_list.append(landmarks)
                 names_list.append(names[i])
+
+
+                for [y, x], [y_gt, x_gt] in zip(landmarks, landmarks_gt):
+                    posture = args.config_file.split('_')[-1].split('.')[0]
+                    # this path stored the original 'dcm' file, and read them just for obtaining the PixelSpacing
+                    dcmfile = os.path.join('/data/experiments/wrist_data_dcm/wrist_'+posture, names[i].replace('png', 'dcm'))
+                    df = pydicom.read_file(dcmfile, force=True)
+
+                    PixelSpacing = df.data_element('PixelSpacing').value
+                    PixelSpacing = (float(PixelSpacing._list[0]), float(PixelSpacing._list[1]))
+
+                    # unit: mm
+                    r = ((y - y_gt) * PixelSpacing[0])**2  + ((x - x_gt) * PixelSpacing[1])**2
+                    radial_error.append(r)
+    
         losses.update(loss.item(), inputs.size(0))
         progress_bar(batch_idx, len(validloader), 'Loss: %.2f' % (losses.avg))
 
@@ -241,6 +261,25 @@ def valid(validloader, model, criterion, use_cuda, common_config, scaler=None, v
         end = time.time()
 
     if visualize:
+        mre = np.mean(np.array(radial_error))
+        mre_sd = np.std(np.array(radial_error))
+
+        SDR_2_0mm = len([i for i in radial_error if i <= 2.]) / len(radial_error)
+        SDR_2_5mm = len([i for i in radial_error if i <= 2.5]) / len(radial_error)
+        SDR_3_0mm = len([i for i in radial_error if i <= 3.]) / len(radial_error)
+        SDR_4_0mm = len([i for i in radial_error if i <= 4.]) / len(radial_error)
+
+        save_path = os.path.join(save_folder, 'evaluated.txt')
+        with open(save_path, 'a') as f:
+            f.write(time.strftime('%Y-%m-%d %H:%M:%S') + '\n')
+            f.write('MRE: %.4f' %(mre) + '\n')
+            f.write('MRE_SD: %.4f' %(mre_sd) + '\n')
+            f.write('SDR_2.0mm: %.4f' %(SDR_2_0mm) + '\n')
+            f.write('SDR_2.5mm: %.4f' %(SDR_2_5mm) + '\n')
+            f.write('SDR_3.0mm: %.4f' %(SDR_3_0mm) + '\n')
+            f.write('SDR_4.0mm: %.4f' %(SDR_4_0mm) + '\n')
+            f.write('━━●●━━━━━━━━━━━━━' + '\n')
+
         landmarks_array = np.array(landmarks_list).reshape(len(landmarks_list), -1)
         return losses.avg, loss.item(), landmarks_array, names_list
     else:
@@ -261,8 +300,8 @@ if __name__ == '__main__':
     # model related, including  Architecture, path, datasets
     parser.add_argument('--config-file', type=str, default='experiments/config_landmarks_AP.yaml')
     # parser.add_argument('--config-file', type=str,default='experiments/config_landmarks_LAT.yaml')
-    parser.add_argument('--gpu-id', type=str, default='1,2')
-    parser.add_argument('--visualize', action='store_false')
+    parser.add_argument('--gpu-id', type=str, default='0,1,2')
+    parser.add_argument('--visualize', action='store_true')
     args = parser.parse_args()
     os.environ["CUDA_VISIBLE_DEVICES"] = args.gpu_id
     main(args.config_file)

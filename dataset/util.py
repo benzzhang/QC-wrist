@@ -1,7 +1,7 @@
 '''
 Author: Peng Bo
 Date: 2022-05-15 17:38:02
-LastEditTime: 2023-05-19 15:30:03
+LastEditTime: 2023-06-01 11:43:01
 Description: utils for landmark_dataset, including heatmap generation
 
 '''
@@ -90,17 +90,16 @@ def rotate(img, angle):
     '''
         Rotate image by a certain angle around its center in counter-clockwise direction
     '''
-    ret = []
-    for i in range(img.shape[0]):
-        ret.append(sktrans.rotate(img[i], angle))
-    return np.array(ret)
+    ret = sktrans.rotate(img, angle)
+    return ret
 
 def translate(img, offsets):
     ''' translation
         offsets: n-item list-like, for each dim
     '''
     offsets = tuple(offsets)
-    size = img.shape[1:]
+    # size = img.shape[1:]
+    size = img.shape
 
     if offsets[0]<0:
         new_x_start = 0
@@ -127,9 +126,13 @@ def translate(img, offsets):
     new_sls = tuple([slice(new_x_start, new_x_end), slice(new_y_start, new_y_end)])
     old_sls = tuple([slice(old_x_start, old_x_end), slice(old_y_start, old_y_end)])
 
-    ret = []
-    for old in img:
-        new = np.zeros(size)
-        new[new_sls] = old[old_sls]
-        ret.append(new)
-    return np.array(ret)
+    # ret = []
+    # for old in img:
+    #     new = np.zeros(size)
+    #     new[new_sls] = old[old_sls]
+    #     ret.append(new)
+    # return np.array(ret)
+
+    new = np.zeros(size)
+    new[new_sls] = img[old_sls]
+    return np.array(new)

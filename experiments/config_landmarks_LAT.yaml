@@ -1,10 +1,11 @@
 common:
     arch: GLNet
     local_net: unet_dw
-    train_batch: 6
-    valid_batch: 6
+    # device: rtx3090 * 3
+    train_batch: 10
+    valid_batch: 24
     lr: 0.02
-    epoch: 200
+    epoch: 50
     weight_decay: 0.0001
     fp16: True
     scheduler_lr: 'cycliclr'

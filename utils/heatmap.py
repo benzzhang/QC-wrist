@@ -59,13 +59,13 @@ def get_landmarks_from_heatmap(heatmaps):
 
     return landmarks
 
-def visualize_heatmap(input, landmarks):
+def visualize_heatmap(input, landmarks, landmarks_gt):
     if len(landmarks) == 3:
         # ['P1-拇指指掌关节', 'P2-桡骨茎突', 'P3-尺骨茎突']
         ldm_name_list = ['P1-metacarpophalangeal joint', 
                          'P2-styloid process of Radius', 
                          'P3-styloid process of Ulna']
-        ldm_color_list = [(255, 0, 0), (0, 255, 0), (0, 0, 255)]
+        ldm_color_list = [(255, 0, 0), (51, 255, 255), (0, 0, 255)]
     if len(landmarks) == 5:
         # ['P1-舟骨中心', 'P2-桡骨远端中心', 'P3-桡骨近端中心', 'P4-尺骨远端中心', 'P5-尺骨近端中心']
         ldm_name_list = ['P1-center of Scaphoid', 
@@ -73,7 +73,7 @@ def visualize_heatmap(input, landmarks):
                          'P3-center of proximal Radius', 
                          'P4-center of remote Ulna', 
                          'P5-center of proximal Ulna']
-        ldm_color_list = [(255, 0, 0), (0, 255, 0), (0, 0, 255), (255, 255, 0), (255, 0, 255)]
+        ldm_color_list = [(255, 0, 0), (51, 255, 255), (0, 0, 255), (255, 255, 0), (255, 0, 255)]
     # img = np.transpose(input.cpu().numpy())[:,:,0]
     img = input.cpu().numpy()[0, :, :]
     img = 255 * (img - np.min(img)) / (np.max(img) - np.min(img))
@@ -87,5 +87,10 @@ def visualize_heatmap(input, landmarks):
         '''
         cv2.circle(img, (x_pos, y_pos), 3, ldm_color_list[idx], -1)
         cv2.putText(img, ldm_name_list[idx], (x_pos+10, y_pos-10), cv2.FONT_HERSHEY_COMPLEX, 0.6, ldm_color_list[idx], 1)    
-
+    for idx, (y_pos, x_pos) in enumerate(landmarks_gt):
+        '''
+            params:(image, (x_pos, y_pos), ...)
+            original point: left upside, right -> X, down-> Y
+        '''
+        cv2.circle(img, (x_pos, y_pos), 3, (0, 255, 0), -1)
     return img

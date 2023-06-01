@@ -102,6 +102,7 @@ class WristLandmarkMaskDataset(Dataset):
         angle = (np.random.rand() - 0.5) * self.transform_paras['rotate_angle']
         offset_x = int((np.random.rand() - 0.5) * self.transform_paras['offset'][0])
         offset_y = int((np.random.rand() - 0.5) * self.transform_paras['offset'][1])
+        
         # rotate
         if np.random.rand() < 0.5:
             img = rotate(img, angle)
@@ -146,7 +147,8 @@ class WristLandmarkMaskDataset(Dataset):
                 lms_mask[i] = 0
                 continue
         
-        img = cv2.cvtColor(img, cv2.COLOR_GRAY2RGB)
+        # img = cv2.cvtColor(img, cv2.COLOR_GRAY2RGB)
+        img = cv2.merge([img, img, img])
         img = img.transpose((2, 0, 1))
         lms_heatmap = lms_heatmap.transpose((2, 0, 1))
         return torch.FloatTensor(img), torch.FloatTensor(lms_heatmap), torch.FloatTensor(lms_mask), img_name
