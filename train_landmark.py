@@ -1,7 +1,7 @@
 '''
 Date: 2023-04-21 10:52:12
 LastEditors: zhangjian zhangjian@cecinvestment.com
-LastEditTime: 2023-06-01 17:35:31
+LastEditTime: 2023-06-02 09:38:08
 FilePath: /QC-wrist/train_landmark.py
 Description: Copyright (c) Pengbo, 2022
             Landmarks detection model, using DATASET 'WristLandmarkMaskDataset'
@@ -312,8 +312,8 @@ if __name__ == '__main__':
 
     parser = argparse.ArgumentParser(description='Landmark Detection for Medical Image')
     # model related, including  Architecture, path, datasets
-    parser.add_argument('--config-file', type=str, default='experiments/config_landmarks_AP.yaml')
-    # parser.add_argument('--config-file', type=str,default='experiments/config_landmarks_LAT.yaml')
+    # parser.add_argument('--config-file', type=str, default='experiments/config_landmarks_AP.yaml')
+    parser.add_argument('--config-file', type=str,default='experiments/config_landmarks_LAT.yaml')
     parser.add_argument('--gpu-id', type=str, default='0,1,2')
     parser.add_argument('--visualize', action='store_true')
     args = parser.parse_args()

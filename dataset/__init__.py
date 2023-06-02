@@ -7,4 +7,3 @@
 '''
 from .xray_classify_dataset import *
 from .xray_landmark_dataset import *
-from .xray_classify_mul_dataset import *

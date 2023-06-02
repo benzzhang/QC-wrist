@@ -1,7 +1,7 @@
 '''
 Date: 2023-04-23 13:47:40
 LastEditors: zhangjian zhangjian@cecinvestment.com
-LastEditTime: 2023-06-01 17:39:03
+LastEditTime: 2023-06-01 17:50:14
 FilePath: /QC-wrist/losses/loss.py
 '''
 import torch
@@ -22,7 +22,7 @@ class mobilenet_mulcls_loss(nn.Module):
         return loss, {'foreign': foreign_loss, 'position': position_loss}
 
 class MaskBCELoss(nn.Module):
-    def __init__(self, reduction='mean'):
+    def __init__(self, reduction='sum'):
         super(MaskBCELoss, self).__init__()
         self.pos_weight = 1
         self.eps = 1e-6

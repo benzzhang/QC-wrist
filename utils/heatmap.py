@@ -80,6 +80,12 @@ def visualize_heatmap(input, landmarks, landmarks_gt):
     img = img.astype(np.uint8)
     img = cv2.merge([img, img, img])
     # draw landmarks on image
+    for idx, (y_pos, x_pos) in enumerate(landmarks_gt):
+        '''
+            params:(image, (x_pos, y_pos), ...)
+            original point: left upside, right -> X, down-> Y
+        '''
+        cv2.circle(img, (x_pos, y_pos), 3, (0, 255, 0), -1)
     for idx, (y_pos, x_pos) in enumerate(landmarks):
         '''
             params:(image, (x_pos, y_pos), ...)
@@ -87,10 +93,5 @@ def visualize_heatmap(input, landmarks, landmarks_gt):
         '''
         cv2.circle(img, (x_pos, y_pos), 3, ldm_color_list[idx], -1)
         cv2.putText(img, ldm_name_list[idx], (x_pos+10, y_pos-10), cv2.FONT_HERSHEY_COMPLEX, 0.6, ldm_color_list[idx], 1)    
-    for idx, (y_pos, x_pos) in enumerate(landmarks_gt):
-        '''
-            params:(image, (x_pos, y_pos), ...)
-            original point: left upside, right -> X, down-> Y
-        '''
-        cv2.circle(img, (x_pos, y_pos), 3, (0, 255, 0), -1)
+    
     return img
