@@ -17,11 +17,15 @@ import torch.backends.cudnn as cudnn
 import torch.optim as optim
 import torch.utils.data as data
 import yaml
+import numpy as np
+import random
 
+import sklearn
 from augmentation.medical_augment import XrayTrainTransform
 
 import models
 import dataset
+import sklearn
 import losses
 from utils import Logger, AverageMeter, mkdir_p, progress_bar
 
@@ -105,7 +109,7 @@ def main(config_file):
     if args.visualize:
         checkpoints = torch.load(os.path.join(common_config['save_path'], 'model_best.pth.tar'))
         model.load_state_dict(checkpoints['state_dict'], False)
-        valid_loss, valid_acc, valid_sens, valid_spec, valid_prec = vaild(validloader, model, criterion, use_cuda)
+        valid_loss, valid_acc, valid_sens, valid_spec, valid_prec, auc, ci_95 = vaild(validloader, model, criterion, use_cuda)
 
         save_folder = os.path.join(common_config['save_path'], 'results/')
         if not os.path.exists(save_folder):
@@ -120,6 +124,7 @@ def main(config_file):
             f.write('specificity: %.4f' %(valid_spec) + '\n')
             f.write('precision: %.4f' %(valid_prec) + '\n')
             f.write('F1: %.4f' %(2*valid_prec*valid_sens/(valid_prec+valid_sens)) + '\n')
+            f.write('AUC:  %.4f(95%CI: %4f~%4f)' %(auc, ci_95[0], ci_95[1]) + '\n')
             f.write('━━●●━━━━━━━━━━━━━' + '\n')
 
         return
@@ -135,7 +140,7 @@ def main(config_file):
 
         print('\nEpoch: [%d | %d] LR: %f' % (epoch + 1, common_config['epoch'], common_config['lr']))
         train_loss, train_acc = train(trainloader, model, criterion, optimizer, use_cuda)
-        valid_loss, valid_acc, _, _, _ = vaild(validloader, model, criterion, use_cuda)
+        valid_loss, valid_acc, _, _, _, _, _ = vaild(validloader, model, criterion, use_cuda)
         # append logger file
         logger.append([common_config['lr'], train_loss, valid_loss, train_acc, valid_acc])
         # save model
@@ -207,6 +212,8 @@ def vaild(validloader, model, criterion, use_cuda):
     prec = AverageMeter()   # precision:   TP/(TP+FP)
     end = time.time()
 
+    labelList = []
+    predList =[]
     for batch_idx, (inputs, targets) in enumerate(validloader):
 
         if use_cuda:
@@ -215,6 +222,11 @@ def vaild(validloader, model, criterion, use_cuda):
 
         # compute gradient and do SGD step
         outputs = model(inputs)
+
+        # calculating AUC, drawing ROC
+        for i, j in zip(targets.tolist(), outputs.tolist()):
+            labelList.append(i[0]) # 0-negative 1-positive
+            predList.append(j[0])
 
         outputs = outputs.view(outputs.size(0), -1)
         targets = targets.view(targets.size(0), -1)
@@ -242,8 +254,30 @@ def vaild(validloader, model, criterion, use_cuda):
         # measure elapsed time
         batch_time.update(time.time() - end)
         end = time.time()
+    
+        # 抽样1000次计算CI
+        labelList_CI = []
+        predList_CI = []
+        auc_values = []
+        idx_list = list(np.arange(len(labelList)))
+        for i in np.arange(1000):
+            idx = random.sample(idx_list, int(len(labelList)*0.7))
+            idx = list(idx)
+            for j in idx:
+                labelList_CI.append(labelList[j])
+                predList_CI.append(predList[j])
+            labelArray = np.array(labelList_CI)
+            predArray = np.array(predList_CI)
+            roc_auc = sklearn.metrics.roc_auc_score(labelArray, predArray)
+            auc_values.append(roc_auc)
+        ci_95 = np.percentile(auc_values, (2.5, 97.5))
 
-    return (losses.avg, acc.avg, sens.avg, spec.avg, prec.avg)
+        # 计算FPR、TPR, 输出AUC(95%CI)
+        fpr, tpr, _ = sklearn.metrics.roc_curve(np.array(labelList), np.array(predList))
+        auc = round(sklearn.metrics.auc(fpr, tpr), 4)
+        ci_95 = (round(ci_95[0], 4), round(ci_95[1], 4))
+
+    return (losses.avg, acc.avg, sens.avg, spec.avg, prec.avg, auc, ci_95)
 
 
 def save_checkpoint(state, is_best, save_path, filename='checkpoint.pth.tar'):
@@ -269,7 +303,7 @@ if __name__ == '__main__':
     # parser.add_argument('--config-file', type=str, default='experiments/config_classify_AP.yaml')
     # parser.add_argument('--config-file', type=str, default='experiments/config_classify_LAT.yaml')
     parser.add_argument('--config-file', type=str, default='experiments/config_classify.yaml')
-    parser.add_argument('--gpu-id', type=str, default='1,2')
+    parser.add_argument('--gpu-id', type=str, default='0,1,2')
     parser.add_argument('--visualize', action='store_false')
     args = parser.parse_args()
     os.environ["CUDA_VISIBLE_DEVICES"] = args.gpu_id

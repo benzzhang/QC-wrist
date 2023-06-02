@@ -1,7 +1,7 @@
 common:
     arch: MobileNet_v2_onecls
-    train_batch: 10
-    valid_batch: 10
+    train_batch: 12
+    valid_batch: 12
     lr: 0.02
     gamma: 0.1
     epoch: 200

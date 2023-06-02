@@ -67,21 +67,22 @@ class WristLandmarkMaskDataset(Dataset):
         lms_heatmap = [self.genHeatmap((x, y), (h, w)) for [x, y] in lms]
         lms_heatmap = np.array(lms_heatmap).transpose((1, 2, 0))
 
-        # VerticalFlip
-        if np.random.rand() < 0.5:
-            VerticalFlip0 = A.VerticalFlip(always_apply=False, p=1)(image=img)
-            VerticalFlip1 = A.VerticalFlip(always_apply=False, p=1)(image=lms_heatmap)
-            img = VerticalFlip0['image']
-            lms_heatmap = VerticalFlip1['image']
-            lms = [[h-lms[i][0], lms[i][1]] for i in range(len(lms))]
+        if self.transform_paras['rotate_angle'] != 0 and self.transform_paras['offset'] != [0, 0]:
+            # VerticalFlip
+            if np.random.rand() < 0.5:
+                VerticalFlip0 = A.VerticalFlip(always_apply=False, p=1)(image=img)
+                VerticalFlip1 = A.VerticalFlip(always_apply=False, p=1)(image=lms_heatmap)
+                img = VerticalFlip0['image']
+                lms_heatmap = VerticalFlip1['image']
+                lms = [[h-lms[i][0], lms[i][1]] for i in range(len(lms))]
 
-        # HorizontalFlip
-        if np.random.rand() < 0.5:
-            HorizontalFlip0 = A.HorizontalFlip(always_apply=False, p=1)(image=img)
-            HorizontalFlip1 = A.HorizontalFlip(always_apply=False, p=1)(image=lms_heatmap)
-            img = HorizontalFlip0['image']
-            lms_heatmap = HorizontalFlip1['image']
-            lms = [[lms[i][0], w-lms[i][1]] for i in range(len(lms))]
+            # HorizontalFlip
+            if np.random.rand() < 0.5:
+                HorizontalFlip0 = A.HorizontalFlip(always_apply=False, p=1)(image=img)
+                HorizontalFlip1 = A.HorizontalFlip(always_apply=False, p=1)(image=lms_heatmap)
+                img = HorizontalFlip0['image']
+                lms_heatmap = HorizontalFlip1['image']
+                lms = [[lms[i][0], w-lms[i][1]] for i in range(len(lms))]
 
         # get rotate positions
         def lms_rotate(points_list, center, angle):

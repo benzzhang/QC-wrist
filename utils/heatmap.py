@@ -85,6 +85,8 @@ def visualize_heatmap(input, landmarks, landmarks_gt):
             params:(image, (x_pos, y_pos), ...)
             original point: left upside, right -> X, down-> Y
         '''
+        if y_pos == 0. and x_pos==0.:
+            continue
         cv2.circle(img, (x_pos, y_pos), 3, (0, 255, 0), -1)
     for idx, (y_pos, x_pos) in enumerate(landmarks):
         '''
