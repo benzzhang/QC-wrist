@@ -1,7 +1,7 @@
 '''
 Date: 2023-04-21 10:52:12
 LastEditors: zhangjian zhangjian@cecinvestment.com
-LastEditTime: 2023-06-02 16:28:43
+LastEditTime: 2023-06-04 20:50:40
 FilePath: /QC-wrist/train_landmark.py
 Description: Copyright (c) Pengbo, 2022
             Landmarks detection model, using DATASET 'WristLandmarkMaskDataset'
@@ -299,7 +299,7 @@ def valid(validloader, model, criterion, use_cuda, common_config, scaler=None, v
 
         # percentile
         p = [50, 80, 85, 90, 95]
-        percentile = np.percentile(data, p)
+        percentile = np.percentile(radial_error, p)
 
         mre = np.mean(np.array(radial_error))
         mre_sd = np.std(np.array(radial_error))
@@ -324,11 +324,11 @@ def valid(validloader, model, criterion, use_cuda, common_config, scaler=None, v
             f.write('SDR_4.0mm: %.4f' %(SDR_4_0mm) + '\n')
             f.write('SDR_5.0mm: %.4f' %(SDR_5_0mm) + '\n')
             f.write('SDR_10.0mm: %.4f' %(SDR_10_0mm) + '\n')
-            f.write('percentile %d%: %.4f' %(p[0], percentile[0]) + '\n')
-            f.write('percentile %d%: %.4f' %(p[1], percentile[1]) + '\n')
-            f.write('percentile %d%: %.4f' %(p[2], percentile[2]) + '\n')
-            f.write('percentile %d%: %.4f' %(p[3], percentile[3]) + '\n')
-            f.write('percentile %d%: %.4f' %(p[4], percentile[4]) + '\n')
+            f.write('percentile %d%%: %.4f' %(p[0], percentile[0]) + '\n')
+            f.write('percentile %d%%: %.4f' %(p[1], percentile[1]) + '\n')
+            f.write('percentile %d%%: %.4f' %(p[2], percentile[2]) + '\n')
+            f.write('percentile %d%%: %.4f' %(p[3], percentile[3]) + '\n')
+            f.write('percentile %d%%: %.4f' %(p[4], percentile[4]) + '\n')
             f.write('━━●●━━━━━━━━━━━━━' + '\n')
 
         landmarks_array = np.array(landmarks_list).reshape(len(landmarks_list), -1)
@@ -349,8 +349,8 @@ if __name__ == '__main__':
 
     parser = argparse.ArgumentParser(description='Landmark Detection for Medical Image')
     # model related, including  Architecture, path, datasets
-    # parser.add_argument('--config-file', type=str, default='experiments/config_landmarks_AP.yaml')
-    parser.add_argument('--config-file', type=str,default='experiments/config_landmarks_LAT.yaml')
+    parser.add_argument('--config-file', type=str, default='experiments/config_landmarks_AP.yaml')
+    # parser.add_argument('--config-file', type=str,default='experiments/config_landmarks_LAT.yaml')
     parser.add_argument('--gpu-id', type=str, default='0,1,2')
     parser.add_argument('--visualize', action='store_false')
     args = parser.parse_args()

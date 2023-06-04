@@ -124,7 +124,7 @@ def main(config_file):
             f.write('specificity: %.4f' %(valid_spec) + '\n')
             f.write('precision: %.4f' %(valid_prec) + '\n')
             f.write('F1: %.4f' %(2*valid_prec*valid_sens/(valid_prec+valid_sens)) + '\n')
-            f.write('AUC:  %.4f(95%CI: %4f~%4f)' %(auc, ci_95[0], ci_95[1]) + '\n')
+            f.write('AUC:  %.4f(95%%CI: %4f~%4f)' %(auc, ci_95[0], ci_95[1]) + '\n')
             f.write('━━●●━━━━━━━━━━━━━' + '\n')
 
         return
