@@ -1,7 +1,8 @@
 common:
     arch: MobileNet_v2_onecls
-    train_batch: 14
-    valid_batch: 14
+    # device: when rtx3090*3 --> bz=14+14
+    train_batch: 7
+    valid_batch: 7
     lr: 0.02
     gamma: 0.1
     epoch: 200
@@ -9,10 +10,6 @@ common:
     momentum: 0.9
     weight_decay: 0.0001
     save_path: /data/experiments/wrist-classify/AP+LAT
-
-augmentation:
-    rotate_angle: 10
-    offset: [16,16]
 
 dataset :
     # The approximate size with the highest frequency in wrist-AP, W*H (960, 1920)

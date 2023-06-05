@@ -1,7 +1,7 @@
 '''
 Date: 2023-05-26 10:19:09
 LastEditors: zhangjian zhangjian@cecinvestment.com
-LastEditTime: 2023-05-31 15:47:48
+LastEditTime: 2023-06-05 17:50:16
 FilePath: /QC-wrist/inference.py
 Description: 
 '''
@@ -17,7 +17,7 @@ import torch
 import cv2
 
 import models
-from utils import get_landmarks_from_heatmap
+from utils import get_landmarks_from_heatmap, visualize_heatmap
 from eval import is_position_mark, flip_AP, flip_LAT, midpoint_of_StyloidProcess_is_center, line_of_LongAxis_is_vertical,\
 include_radius_ulna, distance_from_StyloidProcess_to_edge, Scaphoid_is_center, line_of_StyloidProcess_is_horizontal, basic_information_completed, dose
 
@@ -101,36 +101,21 @@ def inference(models, prending_list):
         '''
         result = (res_mark, res_clsaaify[0][0].item() > res_clsaaify[0][1].item(), get_landmarks_from_heatmap(res_landmark.squeeze().detach())) 
         res_list.append(result)
-        '''
-            code: landmark 推理结果可视化
-            from here to "cv2.imwrite(str(time.time())+'test.png', img)"
-        '''
-        
-        img = df_tensor1.squeeze().cpu().numpy()[0, :, :]
-        img = 255 * (img - np.min(img)) / (np.max(img) - np.min(img))
-        img = img.astype(np.uint8)
-        img = cv2.merge([img, img, img])
 
-        if len(result[2]) == 3:
-            # ['P1-拇指指掌关节', 'P2-桡骨茎突', 'P3-尺骨茎突']
-            ldm_name_list = ['P1-metacarpophalangeal joint', 
-                            'P2-styloid process of Radius', 
-                            'P3-styloid process of Ulna']
-            ldm_color_list = [(255, 0, 0), (0, 255, 0), (0, 0, 255)]
-        if len(result[2]) == 5:
-            # ['P1-舟骨中心', 'P2-桡骨远端中心', 'P3-桡骨近端中心', 'P4-尺骨远端中心', 'P5-尺骨近端中心']
-            ldm_name_list = ['P1-center of Scaphoid', 
-                            'P2-center of remote Radius', 
-                            'P3-center of proximal Radius', 
-                            'P4-center of remote Ulna', 
-                            'P5-center of proximal Ulna']
-            ldm_color_list = [(255, 0, 0), (0, 255, 0), (0, 0, 255), (255, 255, 0), (255, 0, 255)]
-
-        for idx, (y_pos, x_pos) in enumerate(result[2]):
-            cv2.circle(img, (x_pos, y_pos), 3, ldm_color_list[idx], -1)
-            cv2.putText(img, ldm_name_list[idx], (x_pos+10, y_pos-10), cv2.FONT_HERSHEY_COMPLEX, 0.6, ldm_color_list[idx], 1)   
+        '''
+            generate image which keeping original size with landmarks
+        '''
+        size = df_pixel.shape
+        actual_coordinate = []
+        for c in result[2]:
+            ac = [(c[0]/config['size_landmarks']['H'])*size[0], (c[1]/config['size_landmarks']['W'])*size[1]]
+            ac = [int(ac[0]), int(ac[1])]
+            actual_coordinate.append(ac)
+            
+        img = visualize_heatmap(input=cv2.merge([scaled_df_pixel, scaled_df_pixel, scaled_df_pixel]),
+                                landmarks=actual_coordinate)
         cv2.imwrite(os.path.join('./inference_result', i.replace('dcm', 'png')), img)
-        
+
     return res_list
 
 def evaluate_each(dcmfile, coordinate, score_dict):
@@ -140,6 +125,9 @@ def evaluate_each(dcmfile, coordinate, score_dict):
     df.file_meta.TransferSyntaxUID = pydicom.uid.ImplicitVRLittleEndian
     size = df.pixel_array.shape
 
+    '''
+        calculate
+    '''
     PixelSpacing = df.data_element('PixelSpacing').value
     PixelSpacing = [float(PixelSpacing._list[0]),float(PixelSpacing._list[1])]
     PixelSpacing = [PixelSpacing[0] * (size[0] / config['size_landmarks']['H']), PixelSpacing[1] * (size[1] / config['size_landmarks']['W'])]

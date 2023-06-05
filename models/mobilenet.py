@@ -1,7 +1,7 @@
 '''
 Date: 2023-04-23 13:43:23
 LastEditors: zhangjian zhangjian@cecinvestment.com
-LastEditTime: 2023-05-31 11:46:06
+LastEditTime: 2023-06-05 16:00:13
 FilePath: /QC-wrist/models/mobilenet.py
 Description: 
 '''

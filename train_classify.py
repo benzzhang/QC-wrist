@@ -303,7 +303,7 @@ if __name__ == '__main__':
     # parser.add_argument('--config-file', type=str, default='experiments/config_classify_AP.yaml')
     # parser.add_argument('--config-file', type=str, default='experiments/config_classify_LAT.yaml')
     parser.add_argument('--config-file', type=str, default='experiments/config_classify.yaml')
-    parser.add_argument('--gpu-id', type=str, default='0,1,2')
+    parser.add_argument('--gpu-id', type=str, default='1,2')
     parser.add_argument('--visualize', action='store_false')
     args = parser.parse_args()
     os.environ["CUDA_VISIBLE_DEVICES"] = args.gpu_id

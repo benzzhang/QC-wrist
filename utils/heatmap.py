@@ -59,7 +59,7 @@ def get_landmarks_from_heatmap(heatmaps):
 
     return landmarks
 
-def visualize_heatmap(input, landmarks, landmarks_gt):
+def visualize_heatmap(input, landmarks, landmarks_gt=None):
     if len(landmarks) == 3:
         # ['P1-拇指指掌关节', 'P2-桡骨茎突', 'P3-尺骨茎突']
         ldm_name_list = ['P1-metacarpophalangeal joint', 
@@ -75,19 +75,23 @@ def visualize_heatmap(input, landmarks, landmarks_gt):
                          'P5-center of proximal Ulna']
         ldm_color_list = [(255, 0, 0), (51, 255, 255), (0, 0, 255), (255, 255, 0), (255, 0, 255)]
     # img = np.transpose(input.cpu().numpy())[:,:,0]
-    img = input.cpu().numpy()[0, :, :]
-    img = 255 * (img - np.min(img)) / (np.max(img) - np.min(img))
-    img = img.astype(np.uint8)
-    img = cv2.merge([img, img, img])
+    if torch.is_tensor(input):
+        img = input.cpu().numpy()[0, :, :]
+        img = 255 * (img - np.min(img)) / (np.max(img) - np.min(img))
+        img = img.astype(np.uint8)
+        img = cv2.merge([img, img, img])
+    else:
+        img = input
     # draw landmarks on image
-    for idx, (y_pos, x_pos) in enumerate(landmarks_gt):
-        '''
-            params:(image, (x_pos, y_pos), ...)
-            original point: left upside, right -> X, down-> Y
-        '''
-        if y_pos == 0. and x_pos==0.:
-            continue
-        cv2.circle(img, (x_pos, y_pos), 3, (0, 255, 0), -1)
+    if landmarks_gt is not None:
+        for idx, (y_pos, x_pos) in enumerate(landmarks_gt):
+            '''
+                params:(image, (x_pos, y_pos), ...)
+                original point: left upside, right -> X, down-> Y
+            '''
+            if y_pos == 0. and x_pos==0.:
+                continue
+            cv2.circle(img, (x_pos, y_pos), 3, (0, 255, 0), -1)
     for idx, (y_pos, x_pos) in enumerate(landmarks):
         '''
             params:(image, (x_pos, y_pos), ...)
