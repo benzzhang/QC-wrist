@@ -1,7 +1,7 @@
 '''
 Date: 2023-05-26 10:19:09
 LastEditors: zhangjian zhangjian@cecinvestment.com
-LastEditTime: 2023-06-05 17:50:16
+LastEditTime: 2023-06-06 10:50:08
 FilePath: /QC-wrist/inference.py
 Description: 
 '''
@@ -19,7 +19,8 @@ import cv2
 import models
 from utils import get_landmarks_from_heatmap, visualize_heatmap
 from eval import is_position_mark, flip_AP, flip_LAT, midpoint_of_StyloidProcess_is_center, line_of_LongAxis_is_vertical,\
-include_radius_ulna, distance_from_StyloidProcess_to_edge, Scaphoid_is_center, line_of_StyloidProcess_is_horizontal, basic_information_completed, dose
+include_radius_ulna, distance_from_StyloidProcess_to_edge, Scaphoid_is_center, line_of_StyloidProcess_is_horizontal,\
+basic_information_completed, dose, radius_and_ulna_overlap, distal_radius_and_ulna_overlap
 
 
 def init_ai_quality_model():
@@ -172,7 +173,9 @@ def evaluate_each(dcmfile, coordinate, score_dict):
 
         s1 = Scaphoid_is_center(p1, PixelSpacing, size)
         s2 = line_of_LongAxis_is_vertical(p1, p3, p5)
-        layout_score = s1 + s2
+        s3 = radius_and_ulna_overlap(p2, p3, p4, p5)
+        s4 = distal_radius_and_ulna_overlap(p1, p2, p4)
+        layout_score = s1 + s2 + s3 + s4
 
         score_dict['舟骨位于图像正中'] = s1
         score_dict['腕关节长轴与影像长轴平行'] = s2
