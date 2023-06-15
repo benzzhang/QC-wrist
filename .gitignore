@@ -3,3 +3,4 @@
 *.dcm
 !char-L.png
 !char-R.png
+.idea
