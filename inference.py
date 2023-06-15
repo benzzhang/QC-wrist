@@ -1,7 +1,7 @@
 '''
 Date: 2023-05-26 10:19:09
 LastEditors: zhangjian zhangjian@cecinvestment.com
-LastEditTime: 2023-06-06 10:50:08
+LastEditTime: 2023-06-06 11:03:51
 FilePath: /QC-wrist/inference.py
 Description: 
 '''
@@ -243,7 +243,7 @@ def main():
     f.write(json_str)
     f.close()
     
-    print('------------------- inference completed at {}-------------------'.format(time.strftime("%Y-%m-%d %X", time.localtime())))
+    print('------------------- {} cases have been inferred, completed at {}-------------------'.format(len(prending_list), time.strftime("%Y-%m-%d %X", time.localtime())))
 
 if __name__ == '__main__':
     main()
