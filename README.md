@@ -1,5 +1,5 @@
 ## A Quality Control Model for Wrist X-ray Images
-
+![results](example.png)
 ## Introduction
 The project pipeline includes one classification model and two landmarks detection models.  At the same time, we checked the relevant information in the image file and left and right markers on images.   
 classification referring to this paper: [MobileNetV2: Inverted Residuals and Linear Bottlenecks](https://arxiv.org/pdf/1801.04381.pdf)  
