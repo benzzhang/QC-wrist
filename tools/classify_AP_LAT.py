@@ -1,7 +1,7 @@
 '''
 Date: 2023-04-21 10:51:19
 LastEditors: zhangjian zhangjian@cecinvestment.com
-LastEditTime: 2023-05-31 11:34:59
+LastEditTime: 2023-06-27 15:08:01
 FilePath: /QC-wrist/tools/classify_AP_LAT.py
 Description: 
     Classify and save files from the DCM folder obtained from the hospital to a specific folder according to 'ProtocolName'
@@ -14,7 +14,7 @@ import shutil
 import pydicom
 
 def classify(dst):
-    cases_dir = os.listdir(dst)
+    cases_dir = [f for f in os.listdir(dst) if not f.startswith('.')]
     for c in cases_dir:
         cases_path = os.path.join(dst, c)
         dcms_path = os.listdir(cases_path)
