@@ -1,7 +1,7 @@
 '''
 Date: 2023-05-26 10:19:09
 LastEditors: zhangjian zhangjian@cecinvestment.com
-LastEditTime: 2023-06-06 11:03:51
+LastEditTime: 2023-06-29 14:41:59
 FilePath: /QC-wrist/inference.py
 Description: 
 '''
@@ -182,12 +182,12 @@ def evaluate_each(dcmfile, coordinate, score_dict):
 
     score_basic = basic_information_completed(df)
     score_dose = dose(df)
-    layout_score = layout_score + score_basic + score_dose
+    dcm_score = layout_score + score_basic + score_dose
 
     score_dict['基本信息完整度'] = score_basic
     score_dict['辐射剂量'] = score_dose
 
-    return layout_score, score_dict
+    return dcm_score, score_dict
 
 
 def main():
@@ -227,8 +227,8 @@ def main():
             score = 10
         score_dict['artifact'] = qualified_flag
 
-        layout_score, score_dict = evaluate_each(dcmfile, res[2], score_dict)
-        score += layout_score
+        dcm_score, score_dict = evaluate_each(dcmfile, res[2], score_dict)
+        score += dcm_score
 
         if qualified_flag:
             res_dict[str(path)] = score
