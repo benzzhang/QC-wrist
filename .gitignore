@@ -1,6 +1,8 @@
 *.png
 *.json
 *.dcm
+*.onnx
+*.pyc
 !char-L.png
 !char-R.png
 /.idea/
