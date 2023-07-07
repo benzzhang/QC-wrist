@@ -1,7 +1,7 @@
 '''
 Date: 2023-07-04 17:12:56
 LastEditors: zhangjian zhangjian@cecinvestment.com
-LastEditTime: 2023-07-06 17:58:39
+LastEditTime: 2023-07-07 13:41:54
 FilePath: /QC-wrist/depoly/torch2onnx.py
 Description: 
 '''
@@ -15,6 +15,7 @@ sys.path.append('..')
 import models
 import time
 import numpy as np
+from timeit import timeit
 print(os.getcwd())
 
 
@@ -29,6 +30,7 @@ def pytorch2onnx(model, dummy_input):
         input_names=['input'],
         output_names=['output'],
         training=torch.onnx.TrainingMode.EVAL,
+        opset_version=11,
         dynamic_axes={
             "input":{0: "batch_size"},
             "output":{0: "batch_size"}
@@ -43,21 +45,18 @@ def onnx_check(model_path):
     # print(onnx.helper.printable_graph(onnx_model.graph))
 
 
-def onnx_inference(model_path, dummy_input, providers):
-    session = onnxruntime.InferenceSession(model_path, providers=providers)
-
+def onnx_inference(session, dummy_input):
     input_name = session.get_inputs()[0].name
     output_name = session.get_outputs()[0].name
 
-    t0 = time.time()
     outputs = session.run([], {input_name: dummy_input.cpu().numpy()})
-    t1 = time.time()
 
-    return outputs, (t1-t0)*1000
+    return outputs
 
 if __name__ == '__main__':
     global config
-    
+    os.environ["CUDA_VISIBLE_DEVICES"] = '0'
+
     with open('../experiments/config_inference.yaml') as f:
         config = yaml.load(f, Loader=yaml.FullLoader)
 
@@ -83,20 +82,24 @@ if __name__ == '__main__':
     model_landmark_AP.eval()
     model_landmark_LAT.eval()
 
-    dummy_input = torch.randn(3, 3, config['size_classify']['W'], config['size_classify']['H'], dtype=torch.float32)
+    dummy_input = torch.randn(1, 3, config['size_classify']['W'], config['size_classify']['H'], dtype=torch.float32)
+    # dummy_input = torch.randn(1, 3, config['size_landmarks']['W'], config['size_landmarks']['H'], dtype=torch.float32)
     dummy_input = dummy_input.to(device)
     
     onnx_model_path = pytorch2onnx(model_classify, dummy_input)
     onnx_check(onnx_model_path)
 
-    providers = ['CUDAExecutionProvider', 'CPUExecutionProvider'] if torch.cuda.is_available() else ['CPUExecutionProvider']
-    result_onnx, time_onnx = onnx_inference(onnx_model_path, dummy_input, providers)
+    providers = ['CUDAExecutionProvider'] if torch.cuda.is_available() else ['CPUExecutionProvider']
+    # providers = ['CPUExecutionProvider']
+    print(providers)
+
+    session = onnxruntime.InferenceSession(onnx_model_path, providers=providers)
+    result_onnx = onnx_inference(session, dummy_input)
     print(result_onnx)
-
-    t0 = time.time()
     result_pytorch = model_classify(dummy_input)
-    t1 = time.time()
-
     print(result_pytorch)
-    print(np.abs(result_onnx - result_pytorch.detach().cpu().numpy()))
-    print('ONNX cost {:.2f}ms'.format(time_onnx), 'Pytorch cost {:.2f}ms'.format((t1-t0)*1000))
+    print(np.round(np.abs(result_onnx - result_pytorch.detach().cpu().numpy()), 5))
+
+    time_onnx = timeit(lambda: onnx_inference(session, dummy_input), number=50)
+    time_pytorch = timeit(lambda: model_classify(dummy_input), number=50)
+    print('ONNX cost {:.2f}ms'.format(time_onnx*1000), 'Pytorch cost {:.2f}ms'.format(time_pytorch*1000))
