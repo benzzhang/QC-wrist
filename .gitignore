@@ -2,6 +2,7 @@
 *.json
 *.dcm
 *.onnx
+*.trt
 *.pyc
 !char-L.png
 !char-R.png
