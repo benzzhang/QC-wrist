@@ -1,7 +1,7 @@
 '''
 Date: 2023-05-26 14:08:13
 LastEditors: zhangjian zhangjian@cecinvestment.com
-LastEditTime: 2023-06-06 10:58:51
+LastEditTime: 2023-07-13 11:29:08
 FilePath: /QC-wrist/eval/point_judge.py
 Description:
 
@@ -187,7 +187,7 @@ def line_of_LongAxis_is_vertical(p1, p2, p3):
     return score
 
 '''
-    尺桡骨重叠，尺桡骨远端重叠
+    尺桡骨重叠
 '''
 def radius_and_ulna_overlap(p1, p2, p3, p4):
 
