@@ -5,7 +5,6 @@
 @IDE        : PyCharm
 @Description: 
 '''
-import torchvision.transforms as transforms
 import albumentations as A
 def XrayTrainTransform(img_size=256, crop_size=224):
    return A.Compose([

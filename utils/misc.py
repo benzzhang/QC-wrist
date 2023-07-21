@@ -1,5 +1,14 @@
+'''
+Date: 2023-04-21 10:52:12
+LastEditors: zhangjian zhangjian@cecinvestment.com
+LastEditTime: 2023-07-21 14:28:56
+FilePath: /QC-wrist/utils/misc.py
+Description: 
+'''
 import errno
 import os
+import torch
+import shutil
 
 def mkdir_p(path):
     '''make dir if not exist'''
@@ -10,6 +19,12 @@ def mkdir_p(path):
             pass
         else:
             raise
+
+def save_checkpoint(state, is_best, save_path, ckp_name='checkpoint.pth.tar', best_name='model_best.pth.tar'):
+    filepath = os.path.join(save_path, ckp_name)
+    torch.save(state, filepath)
+    if is_best:
+        shutil.copyfile(filepath, os.path.join(save_path, best_name))
 
 class AverageMeter(object):
     """Computes and stores the average and current value

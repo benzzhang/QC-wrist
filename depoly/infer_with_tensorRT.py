@@ -1,18 +1,22 @@
 '''
 Date: 2023-07-07 17:37:42
 LastEditors: zhangjian zhangjian@cecinvestment.com
-LastEditTime: 2023-07-07 19:07:32
+LastEditTime: 2023-07-13 14:18:18
 FilePath: /QC-wrist/depoly/infer_with_tensorRT.py
-Description: 
+Description: tensorRT spent 1/10 as much time as ONNX did, ONNX spent 1/2 as much time as PYTORCH did in (1, 3, 960, 1920) in classification.
 '''
 import numpy as np
 import tensorrt as trt
 import pycuda.driver as cuda
 import pycuda.autoinit
 import time
+import timeit
+import os
+
+os.environ["CUDA_VISIBLE_DEVICES"] = '1'
 
 # 1. 确定batch size大小，与导出的trt模型保持一致
-BATCH_SIZE = 1          
+BATCH_SIZE = 1
 
 # 2. 选择是否采用FP16精度，与导出的trt模型保持一致
 USE_FP16 = False                                         

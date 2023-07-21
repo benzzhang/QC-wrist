@@ -1,7 +1,7 @@
 '''
 Author: Peng Bo
 Date: 2022-05-15 17:38:02
-LastEditTime: 2023-06-01 11:43:01
+LastEditTime: 2023-07-21 16:23:17
 Description: utils for landmark_dataset, including heatmap generation
 
 '''
@@ -30,7 +30,7 @@ def gaussianHeatmap(sigma, dim: int = 2, nsigma: int = 3):
     radius = round(nsigma*sigma)
     center = tuple([radius for i in range(dim)])
     mask_shape = tuple([2*radius for i in range(dim)])
-    mask = np.zeros(mask_shape, dtype=np.float)
+    mask = np.zeros(mask_shape, dtype=float)
     sig2 = sigma**2
     coef = sigma*np.sqrt(2*np.pi)
     for p in product(*[range(i) for i in mask_shape]):
@@ -39,7 +39,7 @@ def gaussianHeatmap(sigma, dim: int = 2, nsigma: int = 3):
     mask = (mask-mask.min())/(mask.max()-mask.min()) # necessary?, yes, the output heatmap is processed with sigmoid
 
     def genHeatmap(point, shape):
-        ret = np.zeros(shape, dtype=np.float)
+        ret = np.zeros(shape, dtype=float)
         if point[0] <= 0 or point[1] <= 0 or point[0]>shape[0] or point[1]>shape[1]:
             return ret
         bboxs = [(max(0, point[ax]-radius), min(shape[ax], point[ax]+radius))

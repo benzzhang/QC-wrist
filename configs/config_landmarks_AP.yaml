@@ -1,4 +1,5 @@
 common:
+    project: wrist-landmarks-AP
     arch: GLNet
     local_net: unet_dw
     # device: when rtx3090*3 --> bz=16+8

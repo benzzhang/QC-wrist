@@ -4,6 +4,7 @@
 *.onnx
 *.trt
 *.pyc
+*.tar
 !char-L.png
 !char-R.png
 /.idea/

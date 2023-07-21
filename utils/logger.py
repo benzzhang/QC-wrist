@@ -1,7 +1,7 @@
 '''
 Date: 2023-04-21 10:52:12
 LastEditors: zhangjian zhangjian@cecinvestment.com
-LastEditTime: 2023-05-18 17:48:59
+LastEditTime: 2023-07-18 17:28:16
 FilePath: /QC-wrist/utils/logger.py
 Description: 
 '''
@@ -81,7 +81,7 @@ class Logger(object):
         plt.legend([self.title + '(' + name + ')' for name in names])
         plt.grid(True)
 
-    def close(self, best):
+    def close(self, best=None):
         if self.file is not None:
             if best is not None:
                 self.file.write('Best acc: %.4f' %(best))

@@ -1,7 +1,7 @@
 '''
 Date: 2023-07-04 17:12:56
 LastEditors: zhangjian zhangjian@cecinvestment.com
-LastEditTime: 2023-07-07 13:41:54
+LastEditTime: 2023-07-13 14:02:28
 FilePath: /QC-wrist/depoly/torch2onnx.py
 Description: 
 '''
@@ -55,7 +55,7 @@ def onnx_inference(session, dummy_input):
 
 if __name__ == '__main__':
     global config
-    os.environ["CUDA_VISIBLE_DEVICES"] = '0'
+    os.environ["CUDA_VISIBLE_DEVICES"] = '1'
 
     with open('../experiments/config_inference.yaml') as f:
         config = yaml.load(f, Loader=yaml.FullLoader)
@@ -100,6 +100,6 @@ if __name__ == '__main__':
     print(result_pytorch)
     print(np.round(np.abs(result_onnx - result_pytorch.detach().cpu().numpy()), 5))
 
-    time_onnx = timeit(lambda: onnx_inference(session, dummy_input), number=50)
-    time_pytorch = timeit(lambda: model_classify(dummy_input), number=50)
+    time_onnx = timeit(lambda: onnx_inference(session, dummy_input), number=1)
+    time_pytorch = timeit(lambda: model_classify(dummy_input), number=1)
     print('ONNX cost {:.2f}ms'.format(time_onnx*1000), 'Pytorch cost {:.2f}ms'.format(time_pytorch*1000))

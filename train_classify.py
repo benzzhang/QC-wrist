@@ -6,12 +6,10 @@
 @Description: Binary classification model, using DATASET 'XrayClassifyDataset'
 '''
 import os
-import shutil
 import time
 
 import cv2
 import torch
-import torch.nn as nn
 import torch.nn.parallel
 import torch.backends.cudnn as cudnn
 import torch.optim as optim
@@ -27,7 +25,7 @@ import models
 import dataset
 import sklearn
 import losses
-from utils import Logger, AverageMeter, mkdir_p, progress_bar
+from utils import Logger, AverageMeter, mkdir_p, progress_bar, save_checkpoint
 
 def main(config_file):
     global common_config, best_acc
@@ -37,8 +35,7 @@ def main(config_file):
         config = yaml.load(f, Loader=yaml.FullLoader)
     common_config = config['common']
 
-    if not os.path.isdir(common_config['save_path']):
-        mkdir_p(common_config['save_path'])
+    mkdir_p(common_config['save_path'])
 
     # initial dataset and dataloader
     data_config = config['dataset']
@@ -107,16 +104,15 @@ def main(config_file):
         weight_decay=common_config['weight_decay'])
 
     if args.visualize:
-        checkpoints = torch.load(os.path.join(common_config['save_path'], 'model_best.pth.tar'))
+        checkpoints = torch.load(os.path.join('checkpoints/', 'model_best_{}.pth.tar'.format(common_config['project'])))
         model.load_state_dict(checkpoints['state_dict'], False)
         valid_loss, valid_acc, valid_sens, valid_spec, valid_prec, auc, ci_95 = vaild(validloader, model, criterion, use_cuda)
 
-        save_folder = os.path.join(common_config['save_path'], 'results/')
-        if not os.path.exists(save_folder):
-            os.makedirs(save_folder)
-        save_path = os.path.join(save_folder, 'inference_results.txt')
+        save_folder = os.path.join(common_config['save_path'], 'visualized_results/')
+        mkdir_p(save_folder)
+        indicators_path = os.path.join(common_config['save_path'], 'indicators_of_valid.txt')
 
-        with open(save_path, 'a') as f:
+        with open(indicators_path, 'a') as f:
             f.write(time.strftime('%Y-%m-%d %H:%M:%S') + '\n')
             f.write('loss: %.4f' %(valid_loss) + '\n')
             f.write('accuracy: %.4f' %(valid_acc) + '\n')
@@ -127,11 +123,14 @@ def main(config_file):
             f.write('AUC:  %.4f(95%%CI: %4f~%4f)' %(auc, ci_95[0], ci_95[1]) + '\n')
             f.write('━━●●━━━━━━━━━━━━━' + '\n')
 
+        #TODO: 分类结果写入 save_folder 目录中
         return
 
     # logger
+    logger_path = os.path.join('experiments/', common_config['project'])
+    mkdir_p(logger_path)
     title = 'Wrist X-ray Image Quality Assessment using ' + common_config['arch']
-    logger = Logger(os.path.join(common_config['save_path'], 'log.txt'), title=title)
+    logger = Logger(os.path.join(logger_path, 'log.txt'), title=title)
     logger.set_names(['Learning Rate', 'Train Loss', 'Valid Loss', 'Train Acc.', 'Valid Acc.'])
 
     # Train and val
@@ -152,7 +151,9 @@ def main(config_file):
             'acc': valid_acc,
             'best_acc': best_acc,
             'optimizer': optimizer.state_dict(),
-        }, is_best, save_path=common_config['save_path'])
+        }, is_best, save_path='checkpoints/', 
+        ckp_name='checkpoint_{}.pth.tar'.format(common_config['project']),
+        best_name='model_best_{}.pth.tar'.format(common_config['project']))
 
     print('Best acc: %.4f' %(best_acc))
     logger.close(best_acc)
@@ -220,7 +221,6 @@ def vaild(validloader, model, criterion, use_cuda):
             inputs, targets = inputs.cuda(), targets.cuda()
         inputs, targets = torch.autograd.Variable(inputs), torch.autograd.Variable(targets)
 
-        # compute gradient and do SGD step
         outputs = model(inputs)
 
         # calculating AUC, drawing ROC
@@ -280,16 +280,9 @@ def vaild(validloader, model, criterion, use_cuda):
     return (losses.avg, acc.avg, sens.avg, spec.avg, prec.avg, auc, ci_95)
 
 
-def save_checkpoint(state, is_best, save_path, filename='checkpoint.pth.tar'):
-    filepath = os.path.join(save_path, filename)
-    torch.save(state, filepath)
-    if is_best:
-        shutil.copyfile(filepath, os.path.join(save_path, 'model_best.pth.tar'))
-
-
 def adjust_learning_rate(optimizer, epoch):
     global common_config
-    if epoch in common_config['scheduler']:
+    if epoch in common_config['schedule']:
         common_config['lr'] *= common_config['gamma']
         for param_group in optimizer.param_groups:
             param_group['lr'] = common_config['lr']
@@ -300,9 +293,7 @@ if __name__ == '__main__':
 
     parser = argparse.ArgumentParser(description='Classify for Medical Image')
     # model related, including  Architecture, path, datasets
-    # parser.add_argument('--config-file', type=str, default='experiments/config_classify_AP.yaml')
-    # parser.add_argument('--config-file', type=str, default='experiments/config_classify_LAT.yaml')
-    parser.add_argument('--config-file', type=str, default='experiments/config_classify.yaml')
+    parser.add_argument('--config-file', type=str, default='configs/config_classify.yaml')
     parser.add_argument('--gpu-id', type=str, default='1,2')
     parser.add_argument('--visualize', action='store_false')
     args = parser.parse_args()
