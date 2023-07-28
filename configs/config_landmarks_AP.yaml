@@ -4,16 +4,16 @@ common:
     local_net: unet_dw
     # device: when rtx3090*3 --> bz=16+8
     train_batch: 16
-    valid_batch: 8
+    valid_batch: 4
     lr: 0.02
-    epoch: 200
+    epoch: 400
     weight_decay: 0.0001
     fp16: True
     scheduler_lr: 'cycliclr'
     cycliclr:
         base_lr: 0.001
-        max_lr: 0.02
-        step_size_up: 50 # step_size_up = len(dataset)/batch_size * (2~10)
+        max_lr: 0.01
+        step_size_up: 50 # step_size_up = len(dataset)/batch_size * (2~10) : 417/16=26
         step_size_down: 50 # same as step_size_up
         mode: 'triangular2'
         cycle_momentum: false

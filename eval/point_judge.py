@@ -1,7 +1,7 @@
 '''
 Date: 2023-05-26 14:08:13
 LastEditors: zhangjian zhangjian@cecinvestment.com
-LastEditTime: 2023-07-13 11:29:08
+LastEditTime: 2023-07-28 10:25:59
 FilePath: /QC-wrist/eval/point_judge.py
 Description:
 
@@ -63,7 +63,7 @@ def flip_LAT(p1, p2, p3, p4, p5, size):
     return p1, p2, p3, p4, p5, size
 
 '''
-    尺桡骨茎突连线中点位于图像正中，上下、左右差<1cm
+    尺桡骨茎突连线中点是否位于图像正中（上下、左右差值<1cm）
 '''
 def midpoint_of_StyloidProcess_is_center(p1, p2, pixelspacing, size):
     # midpoint: (x, y) = (w, h)
@@ -81,7 +81,7 @@ def midpoint_of_StyloidProcess_is_center(p1, p2, pixelspacing, size):
     return score
 
 '''
-    尺桡骨茎突连线与图像纵轴垂直, 角度90°±5以内°
+    尺桡骨茎突连线是否与图像纵轴垂直（角度90°±5°以内）
 '''
 def line_of_StyloidProcess_is_horizontal(p1, p2):
 
@@ -97,7 +97,7 @@ def line_of_StyloidProcess_is_horizontal(p1, p2):
     return score
 
 '''
-    下缘包含尺桡骨3-5cm
+    下缘是否包含尺桡骨3-5cm
 '''
 def include_radius_ulna(p1, p2, pixelspacing, size):
     # units: cm
@@ -117,7 +117,7 @@ def include_radius_ulna(p1, p2, pixelspacing, size):
     return score
 
 '''
-    左右最外侧距影像边缘3-5cm
+    左右最外侧是否距影像边缘3-5cm
 '''
 def distance_from_StyloidProcess_to_edge(p1, p2, pixelspacing, size):
     # units: cm
@@ -153,7 +153,7 @@ def distance_from_StyloidProcess_to_edge(p1, p2, pixelspacing, size):
 
 
 '''
-    舟骨位于图像正中, 上下、左右差<1cm
+    舟骨是否位于图像正中（上下、左右差值<1cm）
 '''
 def Scaphoid_is_center(p1, pixelspacing, size):
     # units: cm
@@ -169,7 +169,7 @@ def Scaphoid_is_center(p1, pixelspacing, size):
     return score
 
 '''
-    腕关节长轴与影像长轴平行
+    腕关节长轴是否与影像长轴平行（两轴所夹锐角<10°）
 '''
 def line_of_LongAxis_is_vertical(p1, p2, p3):
     # midpoint: (x, y) = (w, h)

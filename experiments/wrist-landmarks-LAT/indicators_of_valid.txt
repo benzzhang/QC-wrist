@@ -1,0 +1,16 @@
+2023-07-28 11:59:51
+MRE: 5.1554
+MRE_SD: 11.5319
+SDR_1.0mm: 0.1831
+SDR_2.0mm: 0.4444
+SDR_2.5mm: 0.5427
+SDR_3.0mm: 0.6250
+SDR_4.0mm: 0.7145
+SDR_5.0mm: 0.7613
+SDR_10.0mm: 0.8887
+percentile 50%: 2.2498
+percentile 80%: 6.0398
+percentile 85%: 7.9692
+percentile 90%: 10.7074
+percentile 95%: 15.5425
+━━●●━━━━━━━━━━━━━

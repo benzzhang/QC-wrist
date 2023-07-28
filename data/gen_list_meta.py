@@ -151,14 +151,14 @@ if __name__ == '__main__':
     ldm_name_list_LAT = ['P1-舟骨中心', 'P2-桡骨远端中心', 'P3-桡骨近端中心', 'P4-尺骨远端中心', 'P5-尺骨近端中心'] 
     
     '''
-        from LISTS include AP&LAT for landmarks
+        from LISTS include AP/LAT for landmarks
         after executing, delete LISTS about classifying
     '''
     # gen_list_meta('./wrist_AP', ldm_name_list_AP)
     # gen_list_meta('./wrist_LAT', ldm_name_list_LAT)
 
     '''
-        from LISTS include AP&LAT for classifying
+        from LISTS include AP/LAT for classifying
         after executing, delete LISTS about landmarks
     '''
     gen_list_meta('./wrist', ldm_name_list_AP)

@@ -1,7 +1,7 @@
 '''
 Date: 2023-04-21 10:52:12
 LastEditors: zhangjian zhangjian@cecinvestment.com
-LastEditTime: 2023-07-21 17:42:56
+LastEditTime: 2023-07-28 11:57:24
 FilePath: /QC-wrist/train_landmark.py
 Description: Copyright (c) Pengbo, 2022
             Landmarks detection model, using DATASET 'WristLandmarkMaskDataset'
@@ -118,7 +118,7 @@ def main(config_file):
         SDR_5_0mm = len([i for i in radial_error if i <= 5.]) / len(radial_error)
         SDR_10_0mm = len([i for i in radial_error if i <= 10.]) / len(radial_error)
 
-        indicators_path = os.path.join(common_config['save_path'], 'indicators_of_valid.txt')
+        indicators_path = os.path.join('experiments/', common_config['project'], 'indicators_of_valid.txt')
         with open(indicators_path, 'a') as f:
             f.write(time.strftime('%Y-%m-%d %H:%M:%S') + '\n')
             f.write('MRE: %.4f' %(mre) + '\n')
@@ -255,15 +255,15 @@ def valid(validloader, model, criterion, use_cuda, common_config, scaler=None, v
     landmarks_list = []
     names_list = []
     radial_error = []
-    for batch_idx, datas in enumerate(validloader):
-        (inputs, targets, masks), names = datas
+    for batch_idx, datas in enumerate(validloader): 
+        (inputs, targets, masks), names = datas # because of 'collate_fn'
         if use_cuda:
             inputs, targets, masks = inputs.cuda(), targets.cuda(), masks.cuda()
 
         inputs = torch.autograd.Variable(inputs)
         targets = torch.autograd.Variable(targets)
         masks = torch.autograd.Variable(masks)
-        
+
         # compute output
         if scaler is not None:
             with torch.cuda.amp.autocast():
@@ -274,53 +274,54 @@ def valid(validloader, model, criterion, use_cuda, common_config, scaler=None, v
                 outputs = model(inputs)
                 loss = criterion(outputs, targets, masks) / (outputs.size(0) * outputs.size(1))
 
-        save_folder = os.path.join(common_config['save_path'], 'visualized_results/')
-        mkdir_p(save_folder)
-        for i in range(inputs.size(0)):
-            landmarks = get_landmarks_from_heatmap(outputs[i].detach())
-            # calculate 'mean radial error' (MRE) and 'successful detection rates' (SDR)
-            landmarks_gt = get_landmarks_from_heatmap(targets[i].detach())
-            if visualize:
+        if visualize:
+            save_folder = os.path.join(common_config['save_path'], 'visualized_results/')
+            mkdir_p(save_folder)
+            for i in range(inputs.size(0)):
+                landmarks = get_landmarks_from_heatmap(outputs[i].detach())
+                # calculate 'mean radial error' (MRE) and 'successful detection rates' (SDR)
+                landmarks_gt = get_landmarks_from_heatmap(targets[i].detach())
+
                 visualize_img = visualize_heatmap(inputs[i], landmarks, landmarks_gt)
                 save_path = os.path.join(save_folder, names[i])
                 cv2.imwrite(save_path, visualize_img)
-            landmarks_list.append(landmarks)
-            names_list.append(names[i])
+                landmarks_list.append(landmarks)
+                names_list.append(names[i])
 
-            for [y, x], [y_gt, x_gt] in zip(landmarks, landmarks_gt):
-                posture = args.config_file.split('_')[-1].split('.')[0]
-                # this path stored the original 'dcm' file, and read them just for obtaining the PixelSpacing
-                if y_gt==0. and x_gt==0.:
-                    continue
-                dcmfile = os.path.join('/data/experiments/wrist_valid_data_dcm/wrist_'+posture, names[i].replace('png', 'dcm'))
-                df = pydicom.read_file(dcmfile, force=True)
-                df.file_meta.TransferSyntaxUID = pydicom.uid.ImplicitVRLittleEndian
+                for [y, x], [y_gt, x_gt] in zip(landmarks, landmarks_gt):
+                    posture = args.config_file.split('_')[-1].split('.')[0]
+                    # this path stored the original 'dcm' file, and read them just for obtaining the PixelSpacing
+                    if y_gt==0. and x_gt==0.:
+                        continue
+                    dcmfile = os.path.join('/data/experiments/wrist_data_dcm/wrist_'+posture, names[i].replace('png', 'dcm'))
+                    df = pydicom.read_file(dcmfile, force=True)
+                    df.file_meta.TransferSyntaxUID = pydicom.uid.ImplicitVRLittleEndian
 
-                size = df.pixel_array.shape
-                PixelSpacing = df.data_element('PixelSpacing').value
-                PixelSpacing = (float(PixelSpacing._list[0]), float(PixelSpacing._list[1]))
-                PixelSpacing = [PixelSpacing[0] * (size[0] / data_config['H_size']), PixelSpacing[1] * (size[1] / data_config['W_size'])]
+                    size = df.pixel_array.shape
+                    PixelSpacing = df.data_element('PixelSpacing').value
+                    PixelSpacing = (float(PixelSpacing._list[0]), float(PixelSpacing._list[1]))
+                    PixelSpacing = [PixelSpacing[0] * (size[0] / data_config['H_size']), PixelSpacing[1] * (size[1] / data_config['W_size'])]
 
-                # unit: mm
-                r = math.sqrt(((y - y_gt) * PixelSpacing[0])**2  + ((x - x_gt) * PixelSpacing[1])**2)
-                radial_error.append(r)
+                    # unit: mm
+                    r = math.sqrt(((y - y_gt) * PixelSpacing[0])**2  + ((x - x_gt) * PixelSpacing[1])**2)
+                    radial_error.append(r)
 
-                if r > 100:
-                    # print(names[i], ' ', r)
-                    pass
-            
-            landmarks_array = np.array(landmarks_list).reshape(len(landmarks_list), -1)
-            position_path = os.path.join(common_config['save_path'], 'pred_landmarks.txt')
-            filenames_path = os.path.join(common_config['save_path'], 'pred_filenames.txt')
+                    if r > 100:
+                        # print(names[i], ' ', r)
+                        pass
+                
+                landmarks_array = np.array(landmarks_list).reshape(len(landmarks_list), -1)
+                position_path = os.path.join('experiments/', common_config['project'], 'pred_landmarks.txt')
+                filenames_path = os.path.join('experiments/', common_config['project'], 'pred_filenames.txt')
 
-            np.savetxt(position_path, landmarks_array, fmt='%.2f')
-            # with open(save_path_pos, 'r+') as f:
-            #     content = f.read()
-            #     f.seek(0, 0)
-            #     f.write('cases number:' + str(landmarks_array.shape[0]) + '\n' + content)
-            with open(filenames_path, 'w+') as f:
-                for i in names_list:
-                    f.write(i+'\n')
+                np.savetxt(position_path, landmarks_array, fmt='%.2f')
+                # with open(save_path_pos, 'r+') as f:
+                #     content = f.read()
+                #     f.seek(0, 0)
+                #     f.write('cases number:' + str(landmarks_array.shape[0]) + '\n' + content)
+                with open(filenames_path, 'w+') as f:
+                    for i in names_list:
+                        f.write(i+'\n')
 
         losses.update(loss.item(), inputs.size(0))
         progress_bar(batch_idx, len(validloader), 'Loss: %.2f' % (losses.avg))
@@ -339,7 +340,7 @@ if __name__ == '__main__':
     # parser.add_argument('--config-file', type=str, default='configs/config_landmarks_AP.yaml')
     parser.add_argument('--config-file', type=str,default='configs/config_landmarks_LAT.yaml')
     parser.add_argument('--gpu-id', type=str, default='1,2')
-    parser.add_argument('--visualize', action='store_true')
+    parser.add_argument('--visualize', action='store_false')
     args = parser.parse_args()
     os.environ["CUDA_VISIBLE_DEVICES"] = args.gpu_id
     main(args.config_file)

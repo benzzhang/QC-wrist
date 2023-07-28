@@ -1,13 +1,13 @@
 '''
 Date: 2023-05-26 16:10:41
 LastEditors: zhangjian zhangjian@cecinvestment.com
-LastEditTime: 2023-05-31 10:56:35
+LastEditTime: 2023-07-28 10:50:46
 FilePath: /QC-wrist/eval/chkmsg_judge.py
 Description: 
     4分, 受检者基本信息是否完整? 包含ID号(唯一性)、姓名、性别、出生日期、年龄
-    4分, 检查基本信息是否完整? 包含检查日期、检查时间、曝光次数/(图像数) 
+    4分, 检查基本信息是否完整? 包含检查日期、检查时间、【曝光次数/(图像数) 】
     4分, 检查设备基本信息是否完整? 包含执行医院名称、设备生产商、设备型号、软件版本号
-    4分, 执行参数基本信息是否完整? 包含曝光参数(KV\MA\t)、距离、电离室
+    4分, 执行参数基本信息是否完整?包含曝光参数(kV\mA\t)、距离、【电离室】
     4分, 图像显示参数是否完整? 包含放大标尺、窗宽、窗位
 '''
 def basic_information_completed(dcmfile):

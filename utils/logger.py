@@ -1,7 +1,7 @@
 '''
 Date: 2023-04-21 10:52:12
 LastEditors: zhangjian zhangjian@cecinvestment.com
-LastEditTime: 2023-07-18 17:28:16
+LastEditTime: 2023-07-28 11:21:35
 FilePath: /QC-wrist/utils/logger.py
 Description: 
 '''
@@ -84,7 +84,7 @@ class Logger(object):
     def close(self, best=None):
         if self.file is not None:
             if best is not None:
-                self.file.write('Best acc: %.4f' %(best))
+                self.file.write('Best value: %.4f' %(best))
             self.file.close()
 
 class LoggerMonitor(object):

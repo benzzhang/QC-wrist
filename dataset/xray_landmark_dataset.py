@@ -12,8 +12,7 @@ import math
 
 import torch
 from torch.utils.data import Dataset
-
-from .util import gaussianHeatmap, rotate, translate
+from utils import gaussianHeatmap, rotate, translate
 import albumentations as A
 
 __all__ = ['WristLandmarkMaskDataset']
@@ -32,7 +31,7 @@ class WristLandmarkMaskDataset(Dataset):
         # self.idx_of_lms = list(range(14)) + list(range(20, 26)) # Select a section of points to use
         self.idx_of_lms = list(range(3))
         self.lms_list = [[float(i) for i in v.strip().split(' ')] for v in open(meta).readlines()]
-        self.genHeatmap = gaussianHeatmap(sigma, dim=len(size))
+        self.genHeatmap = gaussianHeatmap(sigma, dim=len(self.img_size))
 
     def __readAllData__(self):
         img_data_list = []
@@ -129,22 +128,22 @@ class WristLandmarkMaskDataset(Dataset):
 
         # mask those points that exceed the boundary of the image
         for i in range(len(translate_pos)):
-            if lms[i][0] > img_size[0] or lms[i][0] < 0:
+            if lms[i][0] >= img_size[0] or lms[i][0] <= 0:
                 lms_mask[i] = 0
                 continue
-            if lms[i][1] > img_size[1] or lms[i][1] < 0:
+            if lms[i][1] >= img_size[1] or lms[i][1] <= 0:
                 lms_mask[i] = 0
                 continue
-            if rotate_pos[i][0] > img_size[0] or rotate_pos[i][0] < 0:
+            if rotate_pos[i][0] >= img_size[0] or rotate_pos[i][0] <= 0:
                 lms_mask[i] = 0
                 continue
-            if rotate_pos[i][1] > img_size[1] or rotate_pos[i][1] < 0:
+            if rotate_pos[i][1] >= img_size[1] or rotate_pos[i][1] <= 0:
                 lms_mask[i] = 0
                 continue
-            if translate_pos[i][0] > img_size[0] or translate_pos[i][0] < 0:
+            if translate_pos[i][0] >= img_size[0] or translate_pos[i][0] <= 0:
                 lms_mask[i] = 0
                 continue
-            if translate_pos[i][1] > img_size[1] or translate_pos[i][1] < 0:
+            if translate_pos[i][1] >= img_size[1] or translate_pos[i][1] <= 0:
                 lms_mask[i] = 0
                 continue
         

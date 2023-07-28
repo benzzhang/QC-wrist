@@ -1,7 +1,7 @@
 '''
 Date: 2023-04-23 13:47:40
 LastEditors: zhangjian zhangjian@cecinvestment.com
-LastEditTime: 2023-06-01 17:50:14
+LastEditTime: 2023-07-27 17:49:11
 FilePath: /QC-wrist/losses/loss.py
 '''
 import torch
