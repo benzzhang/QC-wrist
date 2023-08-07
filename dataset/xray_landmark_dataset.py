@@ -9,9 +9,10 @@ import os
 import numpy as np
 import cv2
 import math
-
+import sys
 import torch
 from torch.utils.data import Dataset
+sys.path.append('..')
 from utils import gaussianHeatmap, rotate, translate
 import albumentations as A
 
@@ -158,16 +159,13 @@ class WristLandmarkMaskDataset(Dataset):
 
 
 if __name__ == "__main__":
-    # prefix = '../data/wrist_AP'
-    # img_list = '../data/wrist_AP_valid_list.txt'
-    # meta = '../data/wrist_AP_valid_landmarks_list.txt'
 
-    prefix = 'data/wrist_AP'
-    img_list = 'data/wrist_AP_valid_list.txt'
-    meta = 'data/wrist_AP_valid_landmarks_list.txt'
+    prefix = '../data/wrist_LAT'
+    img_list = '../data/wrist_LAT_valid_list.txt'
+    meta = '../data/wrist_LAT_valid_landmarks_list.txt'
 
     transform_paras = {'rotate_angle': 30, 'offset': [30, 30]}
-    wrist_dataset = WristLandmarkMaskDataset(img_list, meta, transform_paras, prefix, size=(960, 1920))
+    wrist_dataset = WristLandmarkMaskDataset(img_list, meta, transform_paras, prefix, size=(640, 1280))
 
     for i in range(wrist_dataset.__len__()):
         image, lms_heatmap, lms_mask, img_name = wrist_dataset.__getitem__(i)

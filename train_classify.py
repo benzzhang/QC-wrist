@@ -294,7 +294,7 @@ if __name__ == '__main__':
     parser = argparse.ArgumentParser(description='Classify for Medical Image')
     # model related, including  Architecture, path, datasets
     parser.add_argument('--config-file', type=str, default='configs/config_classify.yaml')
-    parser.add_argument('--gpu-id', type=str, default='0,1,2')
+    parser.add_argument('--gpu-id', type=str, default='1,2')
     parser.add_argument('--visualize', action='store_false')
     args = parser.parse_args()
     os.environ["CUDA_VISIBLE_DEVICES"] = args.gpu_id

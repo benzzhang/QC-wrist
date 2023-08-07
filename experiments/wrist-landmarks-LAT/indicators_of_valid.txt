@@ -14,3 +14,73 @@ percentile 85%: 7.9692
 percentile 90%: 10.7074
 percentile 95%: 15.5425
 ━━●●━━━━━━━━━━━━━
+2023-08-07 15:01:35
+MRE(SD): 5.1554 ± 11.5319
+SDR_1.0mm: 0.1831
+SDR_2.0mm: 0.4444
+SDR_2.5mm: 0.5427
+SDR_3.0mm: 0.6250
+SDR_4.0mm: 0.7145
+SDR_10.0mm: 0.8887
+percentile 50%: 2.2498
+percentile 80%: 6.0398
+percentile 85%: 7.9692
+percentile 90%: 10.7074
+percentile 95%: 15.5425
+━━●●━━━━━━━━━━━━━
+2023-08-07 15:06:50
+MRE(SD): 4.8435 ± 9.4453
+SDR_1.0mm: 0.1846
+SDR_2.0mm: 0.4472
+SDR_2.5mm: 0.5439
+SDR_3.0mm: 0.6276
+SDR_4.0mm: 0.7171
+SDR_10.0mm: 0.8911
+percentile 50%: 2.2381
+percentile 80%: 6.0133
+percentile 85%: 7.7602
+percentile 90%: 10.4606
+percentile 95%: 15.0771
+━━●●━━━━━━━━━━━━━
+2023-08-07 15:11:51
+MRE(SD): 4.8435 ± 9.4453
+SDR_1.0mm: 0.1846
+SDR_2.0mm: 0.4472
+SDR_2.5mm: 0.5439
+SDR_3.0mm: 0.6276
+SDR_4.0mm: 0.7171
+SDR_10.0mm: 0.8911
+percentile 50%: 2.2381
+percentile 80%: 6.0133
+percentile 85%: 7.7602
+percentile 90%: 10.4606
+percentile 95%: 15.0771
+━━●●━━━━━━━━━━━━━
+2023-08-07 15:24:43
+MRE(SD): 3.9636 ± 5.1564
+SDR_1.0mm: 0.1881
+SDR_2.0mm: 0.4579
+SDR_2.5mm: 0.5566
+SDR_3.0mm: 0.6443
+SDR_4.0mm: 0.7345
+SDR_10.0mm: 0.9047
+percentile 50%: 2.1896
+percentile 80%: 5.4807
+percentile 85%: 7.0826
+percentile 90%: 9.6202
+percentile 95%: 13.4613
+━━●●━━━━━━━━━━━━━
+2023-08-07 17:28:47
+MRE(SD): 3.9636 ± 5.1564
+SDR_1.0mm: 0.1881
+SDR_2.0mm: 0.4579
+SDR_2.5mm: 0.5566
+SDR_3.0mm: 0.6443
+SDR_4.0mm: 0.7345
+   SDR_4.0mm for P1: 0.9745
+   SDR_4.0mm for P2: 0.8638
+   SDR_4.0mm for P3: 0.5532
+   SDR_4.0mm for P4: 0.8298
+   SDR_4.0mm for P5: 0.4511
+SDR_10.0mm: 0.9047
+━━●●━━━━━━━━━━━━━

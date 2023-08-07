@@ -1,7 +1,7 @@
 '''
 Date: 2023-04-21 10:52:12
 LastEditors: zhangjian zhangjian@cecinvestment.com
-LastEditTime: 2023-07-28 11:57:24
+LastEditTime: 2023-08-07 17:34:30
 FilePath: /QC-wrist/train_landmark.py
 Description: Copyright (c) Pengbo, 2022
             Landmarks detection model, using DATASET 'WristLandmarkMaskDataset'
@@ -92,8 +92,18 @@ def main(config_file):
     if args.visualize:
         checkpoints = torch.load(os.path.join('checkpoints/', 'model_best_{}.pth.tar'.format(common_config['project'])))
         model.load_state_dict(checkpoints['state_dict'], False)
-        _, _, radial_error = valid(validloader, model, criterion, use_cuda, common_config, visualize=args.visualize)
+        _, _, radial_errors = valid(validloader, model, criterion, use_cuda, common_config, visualize=args.visualize)
 
+        def flat(nums):
+            res = []
+            for i in nums:
+                if isinstance(i, list):
+                    res.extend(flat(i))
+                else:
+                    res.append(i)
+            return res
+        
+        radial_error = flat(radial_errors)
         # frequency histogram
         d = 5  # 组距
         num_bins = (max(radial_error)-min(radial_error)) // d
@@ -115,26 +125,30 @@ def main(config_file):
         SDR_2_5mm = len([i for i in radial_error if i <= 2.5]) / len(radial_error)
         SDR_3_0mm = len([i for i in radial_error if i <= 3.]) / len(radial_error)
         SDR_4_0mm = len([i for i in radial_error if i <= 4.]) / len(radial_error)
-        SDR_5_0mm = len([i for i in radial_error if i <= 5.]) / len(radial_error)
         SDR_10_0mm = len([i for i in radial_error if i <= 10.]) / len(radial_error)
+
+        # indicators for each point
+        SDR_4_0mm_mul = []
+        for n in radial_errors:
+            SDR_4_0mm_mul.append(len([i for i in n if i <= 4.]) / len(n))
 
         indicators_path = os.path.join('experiments/', common_config['project'], 'indicators_of_valid.txt')
         with open(indicators_path, 'a') as f:
             f.write(time.strftime('%Y-%m-%d %H:%M:%S') + '\n')
-            f.write('MRE: %.4f' %(mre) + '\n')
-            f.write('MRE_SD: %.4f' %(mre_sd) + '\n')
+            f.write('MRE(SD): %.4f ± %.4f' %(mre, mre_sd) + '\n')
             f.write('SDR_1.0mm: %.4f' %(SDR_1_0mm) + '\n')
             f.write('SDR_2.0mm: %.4f' %(SDR_2_0mm) + '\n')
             f.write('SDR_2.5mm: %.4f' %(SDR_2_5mm) + '\n')
             f.write('SDR_3.0mm: %.4f' %(SDR_3_0mm) + '\n')
             f.write('SDR_4.0mm: %.4f' %(SDR_4_0mm) + '\n')
-            f.write('SDR_5.0mm: %.4f' %(SDR_5_0mm) + '\n')
+            for idx in range(len(SDR_4_0mm_mul)):
+                f.write('   SDR_4.0mm for P%d: %.4f' %(idx+1, SDR_4_0mm_mul[idx]) + '\n')
             f.write('SDR_10.0mm: %.4f' %(SDR_10_0mm) + '\n')
-            f.write('percentile %d%%: %.4f' %(p[0], percentile[0]) + '\n')
-            f.write('percentile %d%%: %.4f' %(p[1], percentile[1]) + '\n')
-            f.write('percentile %d%%: %.4f' %(p[2], percentile[2]) + '\n')
-            f.write('percentile %d%%: %.4f' %(p[3], percentile[3]) + '\n')
-            f.write('percentile %d%%: %.4f' %(p[4], percentile[4]) + '\n')
+            # f.write('percentile %d%%: %.4f' %(p[0], percentile[0]) + '\n')
+            # f.write('percentile %d%%: %.4f' %(p[1], percentile[1]) + '\n')
+            # f.write('percentile %d%%: %.4f' %(p[2], percentile[2]) + '\n')
+            # f.write('percentile %d%%: %.4f' %(p[3], percentile[3]) + '\n')
+            # f.write('percentile %d%%: %.4f' %(p[4], percentile[4]) + '\n')
             f.write('━━●●━━━━━━━━━━━━━' + '\n')
 
         return
@@ -288,7 +302,10 @@ def valid(validloader, model, criterion, use_cuda, common_config, scaler=None, v
                 landmarks_list.append(landmarks)
                 names_list.append(names[i])
 
-                for [y, x], [y_gt, x_gt] in zip(landmarks, landmarks_gt):
+                if len(radial_error) == 0:
+                    for n in range(len(landmarks)):
+                        radial_error.append([])
+                for idx, ([y, x], [y_gt, x_gt]) in enumerate(zip(landmarks, landmarks_gt)):
                     posture = args.config_file.split('_')[-1].split('.')[0]
                     # this path stored the original 'dcm' file, and read them just for obtaining the PixelSpacing
                     if y_gt==0. and x_gt==0.:
@@ -304,12 +321,12 @@ def valid(validloader, model, criterion, use_cuda, common_config, scaler=None, v
 
                     # unit: mm
                     r = math.sqrt(((y - y_gt) * PixelSpacing[0])**2  + ((x - x_gt) * PixelSpacing[1])**2)
-                    radial_error.append(r)
+                    radial_error[idx].append(r)
 
-                    if r > 100:
-                        # print(names[i], ' ', r)
+                    if r > 20:
+                        print('%s P%d %dmm' %(names[i], idx+1,np.floor(r)))
                         pass
-                
+
                 landmarks_array = np.array(landmarks_list).reshape(len(landmarks_list), -1)
                 position_path = os.path.join('experiments/', common_config['project'], 'pred_landmarks.txt')
                 filenames_path = os.path.join('experiments/', common_config['project'], 'pred_filenames.txt')

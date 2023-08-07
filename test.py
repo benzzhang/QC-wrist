@@ -1,13 +1,31 @@
 '''
 Date: 2023-07-27 16:09:43
 LastEditors: zhangjian zhangjian@cecinvestment.com
-LastEditTime: 2023-07-27 17:18:17
+LastEditTime: 2023-08-07 17:01:59
 FilePath: /QC-wrist/test.py
 Description: 
 '''
 from utils import get_landmarks_from_heatmap, gaussianHeatmap, visualize_heatmap
 import cv2
 import numpy as np
+
+li = []
+x = [1,2,3,4]
+for n in range(len(x)):
+    li.append([])
+li[0].append(12)
+li[1].append(11)
+li[2].append(122)
+li[3].append(13)
+def flat(nums):
+    res = []
+    for i in nums:
+        if isinstance(i, list):
+            res.extend(flat(i))
+        else:
+            res.append(i)
+    return res
+print(flat(li))
 
 img_size = [512, 512]
 
