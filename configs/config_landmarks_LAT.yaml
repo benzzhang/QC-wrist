@@ -4,7 +4,7 @@ common:
     local_net: unet_dw
     # device: when rtx3090*3 --> bz=16+8
     train_batch: 16
-    valid_batch: 4
+    valid_batch: 8
     lr: 0.02
     epoch: 400
     weight_decay: 0.0001

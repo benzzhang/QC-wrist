@@ -1,7 +1,7 @@
 '''
 Date: 2023-04-23 13:47:40
 LastEditors: zhangjian zhangjian@cecinvestment.com
-LastEditTime: 2023-07-27 17:49:11
+LastEditTime: 2023-08-08 15:53:58
 FilePath: /QC-wrist/losses/loss.py
 '''
 import torch
@@ -31,6 +31,7 @@ class MaskBCELoss(nn.Module):
     def forward(self, logits, target, mask):
         # logits: [N, *], target: [N, *]
         loss = - self.pos_weight * (target * torch.log(logits+self.eps) + (1 - target) * torch.log(1 - logits - self.eps))
+        each_loss = torch.sum(loss, dim=(2,3))
 
         if self.reduction == 'mean':
             loss = torch.mean(torch.mean(loss, dim=(2,3)) * mask)

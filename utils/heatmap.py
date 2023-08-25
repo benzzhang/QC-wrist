@@ -44,7 +44,7 @@ def colorize(x):
         cl[:, 2, :, :] = gauss(x, 1, .2, .3)
     return cl
 
-def get_landmarks_from_heatmap(heatmaps):
+def get_landmarks_from_heatmap(heatmaps, project='default', name=None):
     ## Get landmarks from heatmaps with scaling ratios ##
     ## heatmaps: N x L x H x H ##
     ## ratio: N ##
@@ -52,8 +52,17 @@ def get_landmarks_from_heatmap(heatmaps):
     # Get x and y of landmarks
     for i in range(heatmaps.shape[0]):
         hm = heatmaps[i, :, :].cpu().numpy()
-        pos_yx = np.argmax(hm)
-        pos_y, pos_x = np.unravel_index(pos_yx, hm.shape)
+        # replace the channel of non-existent landmark with np.zeros
+        # 不是很合理的方法，依据为"'不存在的landmark的预测heatmap最大值会很小'，正常max值>0.8，不存在的landmark的max值较小"
+        # LAT侧位中仅有4张图像hm.max()大于0.60，最高0.61，且多是P4
+        # AP正位中仅有43张hm.max()小于0.7，15张hm.max()小于0.6
+        if  hm.max() < 0.7 and name is not None:
+            print('%s: P%d, %f'% (name, i+1, hm.max()))
+        if 'AP' in project and i==0 and hm.max() < 0.1:
+            pos_y, pos_x = 0, 0
+        else:
+            pos_yx = np.argmax(hm)
+            pos_y, pos_x = np.unravel_index(pos_yx, hm.shape)
         landmarks.append([pos_y, pos_x])
 
     return landmarks
@@ -96,6 +105,8 @@ def visualize_heatmap(input, landmarks, landmarks_gt=None):
             params:(image, (x_pos, y_pos), ...)
             original point: left upside, right -> X, down-> Y
         '''
+        if y_pos == 0. and x_pos==0.:
+            continue
         cv2.circle(img, (x_pos, y_pos), 3, ldm_color_list[idx], -1)
         cv2.putText(img, ldm_name_list[idx], (x_pos+10, y_pos-10), cv2.FONT_HERSHEY_COMPLEX, 0.6, ldm_color_list[idx], 1)    
     

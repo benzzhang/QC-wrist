@@ -8,9 +8,9 @@ num_classes_classify: 2
 num_classes_AP: 3
 num_classes_LAT: 5 
 
-save_path_classify: /data/experiments/wrist-classify/AP+LAT
-save_path_AP: /data/experiments/wrist-landmark/AP
-save_path_LAT: /data/experiments/wrist-landmark/LAT
+file_classify: model_best_wrist-classify.pth.tar
+file_landmarks_AP: model_best_wrist-landmarks-AP.pth.tar
+file_landmarks_LAT: model_best_wrist-landmarks-LAT.pth.tar
 
 size_classify: 
   W: 960

@@ -1,5 +1,5 @@
 common:
-    project: wrist-classify-AP+LAT
+    project: wrist-classify
     arch: MobileNet_v2_onecls
     # device: when rtx3090*3 --> bz=14+14
     train_batch: 14
@@ -10,7 +10,7 @@ common:
     schedule: [40, 70]
     momentum: 0.9
     weight_decay: 0.0001
-    save_path: /data/experiments/wrist-classify/AP+LAT
+    save_path: /data/experiments/wrist-classify
 
 dataset :
     # The approximate size with the highest frequency in wrist-AP, W*H (960, 1920)

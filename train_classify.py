@@ -110,7 +110,7 @@ def main(config_file):
 
         save_folder = os.path.join(common_config['save_path'], 'visualized_results/')
         mkdir_p(save_folder)
-        indicators_path = os.path.join(common_config['save_path'], 'indicators_of_valid.txt')
+        indicators_path = os.path.join('experiments/', common_config['project'], 'indicators_of_valid.txt')
 
         with open(indicators_path, 'a') as f:
             f.write(time.strftime('%Y-%m-%d %H:%M:%S') + '\n')
@@ -140,6 +140,7 @@ def main(config_file):
         print('\nEpoch: [%d | %d] LR: %f' % (epoch + 1, common_config['epoch'], common_config['lr']))
         train_loss, train_acc = train(trainloader, model, criterion, optimizer, use_cuda)
         valid_loss, valid_acc, _, _, _, _, _ = vaild(validloader, model, criterion, use_cuda)
+        # valid_loss, valid_acc = vaild(validloader, model, criterion, use_cuda)
         # append logger file
         logger.append([common_config['lr'], train_loss, valid_loss, train_acc, valid_acc])
         # save model
@@ -220,8 +221,9 @@ def vaild(validloader, model, criterion, use_cuda):
         if use_cuda:
             inputs, targets = inputs.cuda(), targets.cuda()
         inputs, targets = torch.autograd.Variable(inputs), torch.autograd.Variable(targets)
-
-        outputs = model(inputs)
+        
+        with torch.no_grad():
+            outputs = model(inputs)
 
         # calculating AUC, drawing ROC
         for i, j in zip(targets.tolist(), outputs.tolist()):
@@ -255,29 +257,30 @@ def vaild(validloader, model, criterion, use_cuda):
         batch_time.update(time.time() - end)
         end = time.time()
     
-        # 抽样1000次计算CI
-        labelList_CI = []
-        predList_CI = []
-        auc_values = []
-        idx_list = list(np.arange(len(labelList)))
-        for i in np.arange(1000):
-            idx = random.sample(idx_list, int(len(labelList)*0.7))
-            idx = list(idx)
-            for j in idx:
-                labelList_CI.append(labelList[j])
-                predList_CI.append(predList[j])
-            labelArray = np.array(labelList_CI)
-            predArray = np.array(predList_CI)
-            roc_auc = sklearn.metrics.roc_auc_score(labelArray, predArray)
-            auc_values.append(roc_auc)
-        ci_95 = np.percentile(auc_values, (2.5, 97.5))
+    # 抽样1000次计算CI
+    labelList_CI = []
+    predList_CI = []
+    auc_values = []
+    idx_list = list(np.arange(len(labelList)))
+    for i in np.arange(1000):
+        idx = random.sample(idx_list, int(len(labelList)*0.7))
+        idx = list(idx)
+        for j in idx:
+            labelList_CI.append(labelList[j])
+            predList_CI.append(predList[j])
+        labelArray = np.array(labelList_CI)
+        predArray = np.array(predList_CI)
+        roc_auc = sklearn.metrics.roc_auc_score(labelArray, predArray)
+        auc_values.append(roc_auc)
+    ci_95 = np.percentile(auc_values, (2.5, 97.5))
 
-        # 计算FPR、TPR, 输出AUC(95%CI)
-        fpr, tpr, _ = sklearn.metrics.roc_curve(np.array(labelList), np.array(predList))
-        auc = round(sklearn.metrics.auc(fpr, tpr), 4)
-        ci_95 = (round(ci_95[0], 4), round(ci_95[1], 4))
+    # 计算FPR、TPR, 输出AUC(95%CI)
+    fpr, tpr, _ = sklearn.metrics.roc_curve(np.array(labelList), np.array(predList))
+    auc = round(sklearn.metrics.auc(fpr, tpr), 4)
+    ci_95 = (round(ci_95[0], 4), round(ci_95[1], 4))
 
     return (losses.avg, acc.avg, sens.avg, spec.avg, prec.avg, auc, ci_95)
+    # return (losses.avg, acc.avg)
 
 
 def adjust_learning_rate(optimizer, epoch):

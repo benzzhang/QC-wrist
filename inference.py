@@ -1,7 +1,7 @@
 '''
 Date: 2023-05-26 10:19:09
 LastEditors: zhangjian zhangjian@cecinvestment.com
-LastEditTime: 2023-06-29 14:41:59
+LastEditTime: 2023-08-25 17:32:14
 FilePath: /QC-wrist/inference.py
 Description: 
 '''
@@ -20,7 +20,7 @@ import models
 from utils import get_landmarks_from_heatmap, visualize_heatmap
 from eval import is_position_mark, flip_AP, flip_LAT, midpoint_of_StyloidProcess_is_center, line_of_LongAxis_is_vertical,\
 include_radius_ulna, distance_from_StyloidProcess_to_edge, Scaphoid_is_center, line_of_StyloidProcess_is_horizontal,\
-basic_information_completed, dose, radius_and_ulna_overlap, distal_radius_and_ulna_overlap
+basic_information_completed, dose, radius_and_ulna_overlap, distal_radius_and_ulna_overlap, metacarpophalangeal_joint_is_included
 
 
 def init_ai_quality_model():
@@ -36,9 +36,9 @@ def init_ai_quality_model():
     model_classify = torch.nn.DataParallel(model_classify)
     model_landmark_AP = torch.nn.DataParallel(model_landmark_AP)
     model_landmark_LAT = torch.nn.DataParallel(model_landmark_LAT)
-    model_classify.load_state_dict(torch.load(os.path.join(config['save_path_classify'], 'model_best.pth.tar'))['state_dict'], strict=True)
-    model_landmark_AP.load_state_dict(torch.load(os.path.join(config['save_path_AP'], 'model_best.pth.tar'))['state_dict'], strict=True)
-    model_landmark_LAT.load_state_dict(torch.load(os.path.join(config['save_path_LAT'], 'model_best.pth.tar'))['state_dict'], strict=True)
+    model_classify.load_state_dict(torch.load(os.path.join('checkpoints/', config['file_classify']))['state_dict'], strict=True)
+    model_landmark_AP.load_state_dict(torch.load(os.path.join('checkpoints/', config['file_landmarks_AP']))['state_dict'], strict=True)
+    model_landmark_LAT.load_state_dict(torch.load(os.path.join('checkpoints/', config['file_landmarks_LAT']))['state_dict'], strict=True)
 
     use_cuda = torch.cuda.is_available()
     if use_cuda:
@@ -92,15 +92,18 @@ def inference(models, prending_list):
         # classify
         res_clsaaify = models[0](df_tensor0)
         # landmark
+        flag = 'default'
         if ProtocolName == '腕关节正位':
             res_landmark = models[1](df_tensor1)
+            flag = 'wrist-landmarks-AP'
         elif ProtocolName == '腕关节侧位':
             res_landmark = models[2](df_tensor1)
+            flag = 'wrist-landmarks-LAT'
 
         '''
             return: True/False, True/False, List
         '''
-        result = (res_mark, res_clsaaify[0][0].item() > res_clsaaify[0][1].item(), get_landmarks_from_heatmap(res_landmark.squeeze().detach())) 
+        result = (res_mark, res_clsaaify[0][0].item() > res_clsaaify[0][1].item(), get_landmarks_from_heatmap(res_landmark.squeeze().detach(), project=flag)) 
         res_list.append(result)
 
         '''
@@ -151,16 +154,18 @@ def evaluate_each(dcmfile, coordinate, score_dict):
 
         p1, p2, p3, size = flip_AP(p1, p2, p3, size)
 
-        s1 = midpoint_of_StyloidProcess_is_center(p2, p3, PixelSpacing, size)
-        s2 = line_of_StyloidProcess_is_horizontal(p2, p3)
-        s3 = include_radius_ulna(p2, p3, PixelSpacing, size)
-        s4 = distance_from_StyloidProcess_to_edge(p2, p3, PixelSpacing, size)
-        layout_score = s1 + s2 + s3 + s4
+        s1 = metacarpophalangeal_joint_is_included(p1)
+        s2 = midpoint_of_StyloidProcess_is_center(p2, p3, PixelSpacing, size)
+        s3 = line_of_StyloidProcess_is_horizontal(p2, p3)
+        s4 = include_radius_ulna(p2, p3, PixelSpacing, size)
+        s5 = distance_from_StyloidProcess_to_edge(p2, p3, PixelSpacing, size)
+        layout_score = s1 + s2 + s3 + s4 + s5
         
-        score_dict['尺桡骨茎突连线中点位于图像正中'] = s1
-        score_dict['尺桡骨茎突连线与图像纵轴垂直'] = s2
-        score_dict['下缘包含尺桡骨3-5cm'] = s3
-        score_dict['左右最外侧距影像边缘3-5cm'] = s4
+        score_dict['上缘包含拇指指掌关节'] = s1
+        score_dict['尺桡骨茎突连线中点位于图像正中'] = s2
+        score_dict['尺桡骨茎突连线与图像纵轴垂直'] = s3
+        score_dict['下缘包含尺桡骨3-5cm'] = s4
+        score_dict['左右最外侧距影像边缘3-5cm'] = s5
         
     if ProtocolName == '腕关节侧位' or len(coordinate) == 5:
         p1 = coordinate[0]
@@ -179,10 +184,12 @@ def evaluate_each(dcmfile, coordinate, score_dict):
 
         score_dict['舟骨位于图像正中'] = s1
         score_dict['腕关节长轴与影像长轴平行'] = s2
+        score_dict['尺桡骨重叠'] = s3
+        score_dict['尺桡骨远端重叠'] = s4
 
     score_basic = basic_information_completed(df)
     score_dose = dose(df)
-    dcm_score = layout_score + score_basic + score_dose
+    dcm_score = layout_score + score_basic + 0
 
     score_dict['基本信息完整度'] = score_basic
     score_dict['辐射剂量'] = score_dose
@@ -196,7 +203,7 @@ def main():
     
     parser = argparse.ArgumentParser(description='workflow of QC in wrist')
     # model related, including  Architecture, path, datasets
-    parser.add_argument('--config-file', type=str, default='experiments/config_inference.yaml')
+    parser.add_argument('--config-file', type=str, default='configs/config_inference.yaml')
     parser.add_argument('--gpu-id', type=str, default='1,2')
     args = parser.parse_args()
     os.environ["CUDA_VISIBLE_DEVICES"] = args.gpu_id
@@ -214,28 +221,29 @@ def main():
     res_dict = dict()
     for res, path in zip(res_inference, prending_list):
         score_dict = dict()
-
-        qualified_flag = True
+        score = 0
+        
         dcmfile = os.path.join(config['dcmfile_path'], path)
-        if not res[0]:
-            qualified_flag = False
-        score_dict['mark'] = qualified_flag
 
+        score_dict['左右标识'] = res[0]
+        if res[0]:
+            score += 20
+
+        score_dict['异物伪影'] = res[1]
         if res[1]:
-            score = 5
+            score += 0
         else:
-            score = 10
-        score_dict['artifact'] = qualified_flag
+            score += 10
 
         dcm_score, score_dict = evaluate_each(dcmfile, res[2], score_dict)
         score += dcm_score
 
-        if qualified_flag:
+        if res[0]:
             res_dict[str(path)] = score
         else:
             res_dict[str(path)] = 0
 
-        res_dict['detail of '+str(path)] = score_dict
+        res_dict['details of '+str(path)] = score_dict
     
     import json
     json_str = json.dumps(res_dict, ensure_ascii=False)

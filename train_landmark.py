@@ -1,7 +1,7 @@
 '''
 Date: 2023-04-21 10:52:12
 LastEditors: zhangjian zhangjian@cecinvestment.com
-LastEditTime: 2023-08-07 17:34:30
+LastEditTime: 2023-08-09 15:32:45
 FilePath: /QC-wrist/train_landmark.py
 Description: Copyright (c) Pengbo, 2022
             Landmarks detection model, using DATASET 'WristLandmarkMaskDataset'
@@ -292,7 +292,7 @@ def valid(validloader, model, criterion, use_cuda, common_config, scaler=None, v
             save_folder = os.path.join(common_config['save_path'], 'visualized_results/')
             mkdir_p(save_folder)
             for i in range(inputs.size(0)):
-                landmarks = get_landmarks_from_heatmap(outputs[i].detach())
+                landmarks = get_landmarks_from_heatmap(outputs[i].detach(), project=common_config['project'])
                 # calculate 'mean radial error' (MRE) and 'successful detection rates' (SDR)
                 landmarks_gt = get_landmarks_from_heatmap(targets[i].detach())
 
@@ -324,7 +324,7 @@ def valid(validloader, model, criterion, use_cuda, common_config, scaler=None, v
                     radial_error[idx].append(r)
 
                     if r > 20:
-                        print('%s P%d %dmm' %(names[i], idx+1,np.floor(r)))
+                        # print('%s P%d %dmm' %(names[i], idx+1,np.floor(r)))
                         pass
 
                 landmarks_array = np.array(landmarks_list).reshape(len(landmarks_list), -1)
@@ -354,9 +354,9 @@ if __name__ == '__main__':
 
     parser = argparse.ArgumentParser(description='Landmark Detection for Medical Image')
     # model related, including  Architecture, path, datasets
-    # parser.add_argument('--config-file', type=str, default='configs/config_landmarks_AP.yaml')
-    parser.add_argument('--config-file', type=str,default='configs/config_landmarks_LAT.yaml')
-    parser.add_argument('--gpu-id', type=str, default='1,2')
+    parser.add_argument('--config-file', type=str, default='configs/config_landmarks_AP.yaml')
+    # parser.add_argument('--config-file', type=str,default='configs/config_landmarks_LAT.yaml')
+    parser.add_argument('--gpu-id', type=str, default='0,1,2')
     parser.add_argument('--visualize', action='store_false')
     args = parser.parse_args()
     os.environ["CUDA_VISIBLE_DEVICES"] = args.gpu_id

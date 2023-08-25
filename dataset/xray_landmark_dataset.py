@@ -129,25 +129,19 @@ class WristLandmarkMaskDataset(Dataset):
 
         # mask those points that exceed the boundary of the image
         for i in range(len(translate_pos)):
-            if lms[i][0] >= img_size[0] or lms[i][0] <= 0:
-                lms_mask[i] = 0
-                continue
-            if lms[i][1] >= img_size[1] or lms[i][1] <= 0:
-                lms_mask[i] = 0
-                continue
-            if rotate_pos[i][0] >= img_size[0] or rotate_pos[i][0] <= 0:
-                lms_mask[i] = 0
-                continue
-            if rotate_pos[i][1] >= img_size[1] or rotate_pos[i][1] <= 0:
-                lms_mask[i] = 0
-                continue
-            if translate_pos[i][0] >= img_size[0] or translate_pos[i][0] <= 0:
-                lms_mask[i] = 0
-                continue
-            if translate_pos[i][1] >= img_size[1] or translate_pos[i][1] <= 0:
-                lms_mask[i] = 0
-                continue
+            weight = 0
+            # weight = np.ones(len(translate_pos))*1e3
+            if lms[i][0] >= img_size[0] or lms[i][0] <= 0 or \
+                lms[i][1] >= img_size[1] or lms[i][1] <= 0 or \
+                rotate_pos[i][0] >= img_size[0] or rotate_pos[i][0] <= 0 or \
+                rotate_pos[i][1] >= img_size[1] or rotate_pos[i][1] <= 0 or \
+                translate_pos[i][0] >= img_size[0] or translate_pos[i][0] <= 0 or \
+                translate_pos[i][1] >= img_size[1] or translate_pos[i][1] <= 0:
+                lms_mask[i] = weight
+                # lms_mask = weight
         
+        # if not (lms_mask==1).all():
+        #     print(lms_mask)
         # img = cv2.cvtColor(img, cv2.COLOR_GRAY2RGB)
         img = cv2.merge([img, img, img])
         img = img.transpose((2, 0, 1))
@@ -160,9 +154,9 @@ class WristLandmarkMaskDataset(Dataset):
 
 if __name__ == "__main__":
 
-    prefix = '../data/wrist_LAT'
-    img_list = '../data/wrist_LAT_valid_list.txt'
-    meta = '../data/wrist_LAT_valid_landmarks_list.txt'
+    prefix = '../data/wrist_AP'
+    img_list = '../data/wrist_AP_valid_list.txt'
+    meta = '../data/wrist_AP_valid_landmarks_list.txt'
 
     transform_paras = {'rotate_angle': 30, 'offset': [30, 30]}
     wrist_dataset = WristLandmarkMaskDataset(img_list, meta, transform_paras, prefix, size=(640, 1280))
@@ -183,12 +177,12 @@ if __name__ == "__main__":
         # for (x,y) in transform_pos:
         #     cv2.circle(lms_heatmap, (x,y), 1, (255,0,0), 1)
         # cv2.imshow('heatmap', lms_heatmap)
-        cv2.imwrite('./heatmap'+ str(i)+'.png', lms_heatmap) 
+        # cv2.imwrite('./heatmap'+ str(i)+'.png', lms_heatmap) 
 
         # for (x,y) in translate_pos:
         #     cv2.circle(image, (x,y), 4, (255,0,0), 2)
         # cv2.imshow('image', image)
-        cv2.imwrite('./image'+ str(i)+'.png', image) 
+        # cv2.imwrite('./image'+ str(i)+'.png', image) 
 
         # key = cv2.waitKey(-1)
         # if key != 27:

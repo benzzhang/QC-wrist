@@ -1,7 +1,7 @@
 '''
 Date: 2023-05-26 14:08:13
 LastEditors: zhangjian zhangjian@cecinvestment.com
-LastEditTime: 2023-07-28 10:25:59
+LastEditTime: 2023-08-10 10:11:57
 FilePath: /QC-wrist/eval/point_judge.py
 Description:
 
@@ -61,6 +61,15 @@ def flip_LAT(p1, p2, p3, p4, p5, size):
             size = (size[1], size[0])
 
     return p1, p2, p3, p4, p5, size
+
+'''
+    上缘是否包含拇指指掌关节
+'''
+def metacarpophalangeal_joint_is_included(p1):
+    if p1[0]==0 and p1[1]==0:
+        return 0
+    else:
+        return 10
 
 '''
     尺桡骨茎突连线中点是否位于图像正中（上下、左右差值<1cm）
