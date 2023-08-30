@@ -4,9 +4,9 @@ common:
     local_net: unet_dw
     # device: when rtx3090*3 --> bz=16+8
     train_batch: 16
-    valid_batch: 8
+    valid_batch: 6
     lr: 0.02
-    epoch: 400
+    epoch: 200
     weight_decay: 0.0001
     fp16: True
     scheduler_lr: 'cycliclr'
@@ -30,7 +30,7 @@ augmentation:
 dataset:
     W_size : 640
     H_size : 1280
-    num_classes: 5
+    num_classes: 4
     type: WristLandmarkMaskDataset
 
     train_list: data/wrist_LAT_train_list.txt

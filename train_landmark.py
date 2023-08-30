@@ -1,7 +1,7 @@
 '''
 Date: 2023-04-21 10:52:12
 LastEditors: zhangjian zhangjian@cecinvestment.com
-LastEditTime: 2023-08-09 15:32:45
+LastEditTime: 2023-08-30 10:02:27
 FilePath: /QC-wrist/train_landmark.py
 Description: Copyright (c) Pengbo, 2022
             Landmarks detection model, using DATASET 'WristLandmarkMaskDataset'
@@ -42,12 +42,15 @@ def main(config_file):
     data_config = config['dataset']
     print('==> Preparing dataset %s' % data_config['type'])
     # create dataset for training and validating
+    if 'LAT' in common_config['project']:
+        merge = True
+        # merge = False
     trainset = dataset.__dict__[data_config['type']](
         data_config['train_list'], data_config['train_meta'], augment_config,
-        prefix=data_config['prefix'], size=(data_config['W_size'], data_config['H_size']))
+        prefix=data_config['prefix'], size=(data_config['W_size'], data_config['H_size']), merge=merge)
     validset = dataset.__dict__[data_config['type']](
         data_config['valid_list'], data_config['valid_meta'], {'rotate_angle': 0, 'offset': [0, 0]},
-        prefix=data_config['prefix'], size=(data_config['W_size'], data_config['H_size']))
+        prefix=data_config['prefix'], size=(data_config['W_size'], data_config['H_size']), merge=merge)
 
     # create dataloader for training and validating
     '''
@@ -90,7 +93,7 @@ def main(config_file):
     scheduler = torch.optim.lr_scheduler.CyclicLR(optimizer, **common_config[common_config['scheduler_lr']])
 
     if args.visualize:
-        checkpoints = torch.load(os.path.join('checkpoints/', 'model_best_{}.pth.tar'.format(common_config['project'])))
+        checkpoints = torch.load(os.path.join('checkpoints/', 'model_best_{}-4.pth.tar'.format(common_config['project'])))
         model.load_state_dict(checkpoints['state_dict'], False)
         _, _, radial_errors = valid(validloader, model, criterion, use_cuda, common_config, visualize=args.visualize)
 
@@ -294,7 +297,7 @@ def valid(validloader, model, criterion, use_cuda, common_config, scaler=None, v
             for i in range(inputs.size(0)):
                 landmarks = get_landmarks_from_heatmap(outputs[i].detach(), project=common_config['project'])
                 # calculate 'mean radial error' (MRE) and 'successful detection rates' (SDR)
-                landmarks_gt = get_landmarks_from_heatmap(targets[i].detach())
+                landmarks_gt = get_landmarks_from_heatmap(targets[i].detach(), project=common_config['project'])
 
                 visualize_img = visualize_heatmap(inputs[i], landmarks, landmarks_gt)
                 save_path = os.path.join(save_folder, names[i])
@@ -354,8 +357,8 @@ if __name__ == '__main__':
 
     parser = argparse.ArgumentParser(description='Landmark Detection for Medical Image')
     # model related, including  Architecture, path, datasets
-    parser.add_argument('--config-file', type=str, default='configs/config_landmarks_AP.yaml')
-    # parser.add_argument('--config-file', type=str,default='configs/config_landmarks_LAT.yaml')
+    # parser.add_argument('--config-file', type=str, default='configs/config_landmarks_AP.yaml')
+    parser.add_argument('--config-file', type=str,default='configs/config_landmarks_LAT.yaml')
     parser.add_argument('--gpu-id', type=str, default='0,1,2')
     parser.add_argument('--visualize', action='store_false')
     args = parser.parse_args()

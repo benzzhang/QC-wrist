@@ -5,15 +5,17 @@
 @IDE        : PyCharm
 @Description: 
 '''
-import os
+import os, inspect
 import numpy as np
 import cv2
 import math
 import sys
 import torch
 from torch.utils.data import Dataset
-sys.path.append('..')
-from utils import gaussianHeatmap, rotate, translate
+# current_dir=os.path.dirname(os.path.abspath(inspect.getfile(inspect.currentframe())))
+# os.chdir(current_dir)
+# sys.path.append('../')
+from utils import gaussianHeatmap, rotate, translate, get_landmarks_from_heatmap, merge_hm
 import albumentations as A
 
 __all__ = ['WristLandmarkMaskDataset']
@@ -21,7 +23,7 @@ __all__ = ['WristLandmarkMaskDataset']
 
 class WristLandmarkMaskDataset(Dataset):
 
-    def __init__(self, img_list, meta, transform_paras, prefix='data/', size=(512, 512), sigma=5):
+    def __init__(self, img_list, meta, transform_paras, prefix='data/', size=(512, 512), sigma=5, merge=False):
 
         self.transform_paras = transform_paras
         self.prefix = prefix
@@ -33,6 +35,7 @@ class WristLandmarkMaskDataset(Dataset):
         self.idx_of_lms = list(range(3))
         self.lms_list = [[float(i) for i in v.strip().split(' ')] for v in open(meta).readlines()]
         self.genHeatmap = gaussianHeatmap(sigma, dim=len(self.img_size))
+        self.merge = merge
 
     def __readAllData__(self):
         img_data_list = []
@@ -65,6 +68,14 @@ class WristLandmarkMaskDataset(Dataset):
         lms = [[int(lms[i] * h), int(lms[i + 1] * w)] for i in range(0, int(len(lms)), 2)]
         # lms = [lms[idx] for idx in self.idx_of_lms] # 取部分points用
         lms_heatmap = [self.genHeatmap((x, y), (h, w)) for [x, y] in lms]
+        # cv2.imwrite('./hm2.png',lms_heatmap[2]*255)
+        # cv2.imwrite('./hm4.png',lms_heatmap[4]*255)
+        # cv2.imwrite('./mergehm.png',merge_hm(lms_heatmap[2], lms_heatmap[4], (h, w))*255)
+        # the order of points in merge_heatmap is [p1, p2, p4, [p3, p5]] in LAT
+        if self.merge:
+            lms_heatmap = [lms_heatmap[0], lms_heatmap[1], lms_heatmap[3], merge_hm(lms_heatmap[2], lms_heatmap[4], (h, w))]
+        # landmarks = get_landmarks_from_heatmap(np.array(lms_heatmap), project='wrist-landmarks-LAT')
+        # cv2 (H,W,C) ; tensor (N,C,H,W)
         lms_heatmap = np.array(lms_heatmap).transpose((1, 2, 0))
 
         if self.transform_paras['rotate_angle'] != 0 and self.transform_paras['offset'] != [0, 0]:
@@ -129,19 +140,18 @@ class WristLandmarkMaskDataset(Dataset):
 
         # mask those points that exceed the boundary of the image
         for i in range(len(translate_pos)):
-            weight = 0
-            # weight = np.ones(len(translate_pos))*1e3
             if lms[i][0] >= img_size[0] or lms[i][0] <= 0 or \
                 lms[i][1] >= img_size[1] or lms[i][1] <= 0 or \
                 rotate_pos[i][0] >= img_size[0] or rotate_pos[i][0] <= 0 or \
                 rotate_pos[i][1] >= img_size[1] or rotate_pos[i][1] <= 0 or \
                 translate_pos[i][0] >= img_size[0] or translate_pos[i][0] <= 0 or \
                 translate_pos[i][1] >= img_size[1] or translate_pos[i][1] <= 0:
-                lms_mask[i] = weight
-                # lms_mask = weight
-        
-        # if not (lms_mask==1).all():
-        #     print(lms_mask)
+                lms_mask[i] = 0
+        if self.merge:
+            merge_mask = lms_mask[2] or lms_mask[4]
+            lms_mask = np.delete(lms_mask, 2)
+            lms_mask = np.delete(lms_mask, 3)
+            lms_mask = np.append(lms_mask, merge_mask)
         # img = cv2.cvtColor(img, cv2.COLOR_GRAY2RGB)
         img = cv2.merge([img, img, img])
         img = img.transpose((2, 0, 1))
@@ -154,9 +164,9 @@ class WristLandmarkMaskDataset(Dataset):
 
 if __name__ == "__main__":
 
-    prefix = '../data/wrist_AP'
-    img_list = '../data/wrist_AP_valid_list.txt'
-    meta = '../data/wrist_AP_valid_landmarks_list.txt'
+    prefix = '../data/wrist_LAT'
+    img_list = '../data/wrist_LAT_valid_list.txt'
+    meta = '../data/wrist_LAT_valid_landmarks_list.txt'
 
     transform_paras = {'rotate_angle': 30, 'offset': [30, 30]}
     wrist_dataset = WristLandmarkMaskDataset(img_list, meta, transform_paras, prefix, size=(640, 1280))
