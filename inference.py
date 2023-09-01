@@ -1,7 +1,7 @@
 '''
 Date: 2023-05-26 10:19:09
 LastEditors: zhangjian zhangjian@cecinvestment.com
-LastEditTime: 2023-08-25 17:32:14
+LastEditTime: 2023-09-01 16:50:01
 FilePath: /QC-wrist/inference.py
 Description: 
 '''
@@ -28,24 +28,30 @@ def init_ai_quality_model():
         initial the ai quality model
     '''
     global use_cuda
-    model_classify = models.__dict__[config['arch_classify']](num_classes=config['num_classes_classify'])
-    model_landmark_AP = models.__dict__[config['arch_lanmarks']](num_classes=config['num_classes_AP'],
-                                                     local_net=config['local_net'])
-    model_landmark_LAT = models.__dict__[config['arch_lanmarks']](num_classes=config['num_classes_LAT'],
-                                                     local_net=config['local_net'])
-    model_classify = torch.nn.DataParallel(model_classify)
+    model_classify_artifact = models.__dict__[config['arch_classify']](num_classes=config['num_classes_classify'])
+    model_classify_overlap = models.__dict__[config['arch_classify']](num_classes=config['num_classes_classify'])
+    model_landmark_AP = models.__dict__[config['arch_lanmarks']](num_classes=config['num_classes_AP'], local_net=config['local_net'])
+    model_landmark_LAT = models.__dict__[config['arch_lanmarks']](num_classes=config['num_classes_LAT'], local_net=config['local_net'])
+
+    # 'torch.nn.DataParallel' will load model on the default CUDA
+    model_classify_artifact = torch.nn.DataParallel(model_classify_artifact)
+    model_classify_overlap = torch.nn.DataParallel(model_classify_overlap)
     model_landmark_AP = torch.nn.DataParallel(model_landmark_AP)
     model_landmark_LAT = torch.nn.DataParallel(model_landmark_LAT)
-    model_classify.load_state_dict(torch.load(os.path.join('checkpoints/', config['file_classify']))['state_dict'], strict=True)
+
+    # 'load_state_dict' starting to occupy the memory of GPU
+    model_classify_artifact.load_state_dict(torch.load(os.path.join('checkpoints/', config['file_classify_artifact']))['state_dict'], strict=True)
+    model_classify_overlap.load_state_dict(torch.load(os.path.join('checkpoints/', config['file_classify_overlap']))['state_dict'], strict=True)
     model_landmark_AP.load_state_dict(torch.load(os.path.join('checkpoints/', config['file_landmarks_AP']))['state_dict'], strict=True)
     model_landmark_LAT.load_state_dict(torch.load(os.path.join('checkpoints/', config['file_landmarks_LAT']))['state_dict'], strict=True)
 
     use_cuda = torch.cuda.is_available()
     if use_cuda:
-        model_classify = model_classify.cuda()
+        model_classify_artifact = model_classify_artifact.cuda()
+        model_classify_overlap = model_classify_overlap.cuda()
         model_landmark_AP = model_landmark_AP.cuda()
         model_landmark_LAT = model_landmark_LAT.cuda()
-    return model_classify, model_landmark_AP, model_landmark_LAT
+    return model_classify_artifact, model_classify_overlap, model_landmark_AP, model_landmark_LAT
 
 
 def inference(models, prending_list):
@@ -55,6 +61,8 @@ def inference(models, prending_list):
     models[0].eval()
     models[1].eval()
     models[2].eval()
+    models[3].eval()
+
     print('start inferencing ...')
     res_list = []
     for i in prending_list:
@@ -89,21 +97,30 @@ def inference(models, prending_list):
 
         # position mark detection
         res_mark = is_position_mark(scaled_df_pixel)
-        # classify
-        res_clsaaify = models[0](df_tensor0)
-        # landmark
-        flag = 'default'
-        if ProtocolName == '腕关节正位':
-            res_landmark = models[1](df_tensor1)
-            flag = 'wrist-landmarks-AP'
-        elif ProtocolName == '腕关节侧位':
-            res_landmark = models[2](df_tensor1)
-            flag = 'wrist-landmarks-LAT'
 
+        # model inferring
+        with torch.no_grad():
+        # classify for artifact
+            res_clsaaify_artifact = models[0](df_tensor0)
+            # landmark
+            flag = 'default'
+            if ProtocolName == '腕关节正位':
+                res_landmark = models[2](df_tensor1)
+                flag = 'wrist-landmarks-AP'
+            elif ProtocolName == '腕关节侧位':
+                # in LAT, an classify for overlap
+                res_classify_overlap = models[1](df_tensor0)
+                res_landmark = models[3](df_tensor1)
+                flag = 'wrist-landmarks-LAT'
+        # release the cache of PyTorch&CUDA
+        # torch.cuda.empty_cache()
         '''
             return: True/False, True/False, List
         '''
-        result = (res_mark, res_clsaaify[0][0].item() > res_clsaaify[0][1].item(), get_landmarks_from_heatmap(res_landmark.squeeze().detach(), project=flag)) 
+        result = (res_mark, 
+                  res_clsaaify_artifact[0][0].item() > res_clsaaify_artifact[0][1].item(), 
+                  get_landmarks_from_heatmap(res_landmark.squeeze().detach(), project=flag),
+                  res_classify_overlap[0][0].item() > res_classify_overlap[0][1].item() if 'LAT' in flag else None)
         res_list.append(result)
 
         '''
@@ -122,7 +139,7 @@ def inference(models, prending_list):
 
     return res_list
 
-def evaluate_each(dcmfile, coordinate, score_dict):
+def evaluate_each(dcmfile, coordinate, overlap, score_dict):
     df = pydicom.read_file(dcmfile, force=True)
     ProtocolName = df.data_element('ProtocolName').value
     
@@ -147,7 +164,7 @@ def evaluate_each(dcmfile, coordinate, score_dict):
     for idx, point in enumerate(coordinate):
         coordinate[idx] = [point[1], point[0]]
 
-    if ProtocolName == '腕关节正位' or len(coordinate) == 3:
+    if ProtocolName == '腕关节正位':
         p1 = coordinate[0]
         p2 = coordinate[1]
         p3 = coordinate[2]
@@ -167,7 +184,7 @@ def evaluate_each(dcmfile, coordinate, score_dict):
         score_dict['下缘包含尺桡骨3-5cm'] = s4
         score_dict['左右最外侧距影像边缘3-5cm'] = s5
         
-    if ProtocolName == '腕关节侧位' or len(coordinate) == 5:
+    if ProtocolName == '腕关节侧位':
         p1 = coordinate[0]
         p2 = coordinate[1]
         p3 = coordinate[2]
@@ -178,7 +195,8 @@ def evaluate_each(dcmfile, coordinate, score_dict):
 
         s1 = Scaphoid_is_center(p1, PixelSpacing, size)
         s2 = line_of_LongAxis_is_vertical(p1, p3, p5)
-        s3 = radius_and_ulna_overlap(p2, p3, p4, p5)
+        s3 = 5 if overlap else 0
+        # s3 = radius_and_ulna_overlap(p2, p3, p4, p5)
         s4 = distal_radius_and_ulna_overlap(p1, p2, p4)
         layout_score = s1 + s2 + s3 + s4
 
@@ -204,7 +222,7 @@ def main():
     parser = argparse.ArgumentParser(description='workflow of QC in wrist')
     # model related, including  Architecture, path, datasets
     parser.add_argument('--config-file', type=str, default='configs/config_inference.yaml')
-    parser.add_argument('--gpu-id', type=str, default='1,2')
+    parser.add_argument('--gpu-id', type=str, default='0,1,2')
     args = parser.parse_args()
     os.environ["CUDA_VISIBLE_DEVICES"] = args.gpu_id
     with open(args.config_file) as f:
@@ -235,7 +253,7 @@ def main():
         else:
             score += 10
 
-        dcm_score, score_dict = evaluate_each(dcmfile, res[2], score_dict)
+        dcm_score, score_dict = evaluate_each(dcmfile, res[2], res[3], score_dict)
         score += dcm_score
 
         if res[0]:

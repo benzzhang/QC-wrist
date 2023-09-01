@@ -1,7 +1,7 @@
 '''
 Date: 2023-04-21 10:52:12
 LastEditors: zhangjian zhangjian@cecinvestment.com
-LastEditTime: 2023-08-30 10:02:27
+LastEditTime: 2023-08-31 16:22:40
 FilePath: /QC-wrist/train_landmark.py
 Description: Copyright (c) Pengbo, 2022
             Landmarks detection model, using DATASET 'WristLandmarkMaskDataset'
@@ -43,8 +43,8 @@ def main(config_file):
     print('==> Preparing dataset %s' % data_config['type'])
     # create dataset for training and validating
     if 'LAT' in common_config['project']:
-        merge = True
-        # merge = False
+        # merge = True
+        merge = False
     trainset = dataset.__dict__[data_config['type']](
         data_config['train_list'], data_config['train_meta'], augment_config,
         prefix=data_config['prefix'], size=(data_config['W_size'], data_config['H_size']), merge=merge)
@@ -93,9 +93,9 @@ def main(config_file):
     scheduler = torch.optim.lr_scheduler.CyclicLR(optimizer, **common_config[common_config['scheduler_lr']])
 
     if args.visualize:
-        checkpoints = torch.load(os.path.join('checkpoints/', 'model_best_{}-4.pth.tar'.format(common_config['project'])))
+        checkpoints = torch.load(os.path.join('checkpoints/', 'model_best_{}.pth.tar'.format(common_config['project'])))
         model.load_state_dict(checkpoints['state_dict'], False)
-        _, _, radial_errors = valid(validloader, model, criterion, use_cuda, common_config, visualize=args.visualize)
+        _, radial_errors = valid(validloader, model, criterion, use_cuda, common_config, visualize=args.visualize)
 
         def flat(nums):
             res = []
@@ -161,7 +161,7 @@ def main(config_file):
     mkdir_p(logger_path)
     title = 'Wrist landamrks detection using' + common_config['arch']
     logger = Logger(os.path.join(logger_path, 'log.txt'), title=title)
-    logger.set_names(['Learning Rate', 'Avg-Train Loss', 'Avg-Valid Loss', 'Epoch-Train Loss', 'Epoch-Valid Loss'])
+    logger.set_names(['Learning Rate', 'Avg-Train Loss', 'Avg-Valid Loss'])
 
     # Creates a GradScaler once at the beginning of training.
     scaler = torch.cuda.amp.GradScaler(enabled=True) if config['common']['fp16'] == True else None
@@ -171,14 +171,14 @@ def main(config_file):
     for epoch in range(common_config['epoch']):
         lr = scheduler.get_last_lr()[0]
         print('\nEpoch: [%d | %d] LR: %f' %(epoch + 1, common_config['epoch'], lr))
-        train_loss, ep_train_loss = train(trainloader, model, criterion, optimizer, use_cuda, scaler, scheduler)
-        valid_loss, ep_valid_loss, _ = valid(validloader, model, criterion, use_cuda, common_config, scaler=scaler)
+        train_loss = train(trainloader, model, criterion, optimizer, use_cuda, scaler, scheduler)
+        valid_loss, _ = valid(validloader, model, criterion, use_cuda, common_config, scaler=scaler)
         scheduler.step()
         is_best = valid_loss < best_loss
         best_loss = min(valid_loss, best_loss)
 
         # append logger file & save model
-        logger.append([lr, train_loss, valid_loss, ep_train_loss, ep_valid_loss])
+        logger.append([lr, train_loss, valid_loss])
         save_checkpoint({
             'epoch': epoch + 1,
             'state_dict': model.state_dict(),
@@ -259,7 +259,7 @@ def train(trainloader, model, criterion, optimizer, use_cuda, scaler=None, sched
         batch_time.update(time.time() - end)
         end = time.time()
 
-    return losses.avg, loss.item()
+    return losses.avg
 
 
 def valid(validloader, model, criterion, use_cuda, common_config, scaler=None, visualize=None):
@@ -350,7 +350,7 @@ def valid(validloader, model, criterion, use_cuda, common_config, scaler=None, v
         batch_time.update(time.time() - end)
         end = time.time()
 
-    return losses.avg, loss.item(), radial_error
+    return losses.avg, radial_error
 
 if __name__ == '__main__':
     import argparse

@@ -3,8 +3,8 @@
 @Init Date  : 2023-04-18 16:38
 @File       : xray_classify_dataset.py
 @IDE        : PyCharm
-@Description: 0->[0, 1] 无异物伪影
-              1->[1, 0] 有异物伪影
+@Description: 0->[0, 1] 无异物伪影 / 尺桡骨不重叠
+              1->[1, 0] 有异物伪影 / 尺桡骨重叠
 '''
 import os
 import cv2
@@ -47,7 +47,7 @@ class XrayClassifyDataset(Dataset):
             img = self.transform(image=img)['image']
         img = torch.FloatTensor(img.transpose((2, 0, 1)))
 
-        label = self.metas[index][1]
+        label = self.metas[index][0]
         if label == 0:
             label = [0, 1]
         else:

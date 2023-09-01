@@ -3,7 +3,7 @@ common:
     arch: GLNet
     local_net: unet_dw
     # device: when rtx3090*3 --> bz=16+8
-    train_batch: 16
+    train_batch: 12
     valid_batch: 6
     lr: 0.02
     epoch: 200
@@ -30,7 +30,7 @@ augmentation:
 dataset:
     W_size : 640
     H_size : 1280
-    num_classes: 4
+    num_classes: 5
     type: WristLandmarkMaskDataset
 
     train_list: data/wrist_LAT_train_list.txt

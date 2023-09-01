@@ -6,9 +6,10 @@ local_net: unet_dw
 
 num_classes_classify: 2
 num_classes_AP: 3
-num_classes_LAT: 5 
+num_classes_LAT: 5
 
-file_classify: model_best_wrist-classify.pth.tar
+file_classify_artifact: model_best_wrist-classify-artifact.pth.tar
+file_classify_overlap: model_best_wrist-classify-overlap.pth.tar
 file_landmarks_AP: model_best_wrist-landmarks-AP.pth.tar
 file_landmarks_LAT: model_best_wrist-landmarks-LAT.pth.tar
 

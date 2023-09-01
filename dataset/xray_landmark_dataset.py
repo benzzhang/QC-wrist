@@ -68,13 +68,9 @@ class WristLandmarkMaskDataset(Dataset):
         lms = [[int(lms[i] * h), int(lms[i + 1] * w)] for i in range(0, int(len(lms)), 2)]
         # lms = [lms[idx] for idx in self.idx_of_lms] # 取部分points用
         lms_heatmap = [self.genHeatmap((x, y), (h, w)) for [x, y] in lms]
-        # cv2.imwrite('./hm2.png',lms_heatmap[2]*255)
-        # cv2.imwrite('./hm4.png',lms_heatmap[4]*255)
-        # cv2.imwrite('./mergehm.png',merge_hm(lms_heatmap[2], lms_heatmap[4], (h, w))*255)
         # the order of points in merge_heatmap is [p1, p2, p4, [p3, p5]] in LAT
         if self.merge:
             lms_heatmap = [lms_heatmap[0], lms_heatmap[1], lms_heatmap[3], merge_hm(lms_heatmap[2], lms_heatmap[4], (h, w))]
-        # landmarks = get_landmarks_from_heatmap(np.array(lms_heatmap), project='wrist-landmarks-LAT')
         # cv2 (H,W,C) ; tensor (N,C,H,W)
         lms_heatmap = np.array(lms_heatmap).transpose((1, 2, 0))
 
@@ -152,7 +148,7 @@ class WristLandmarkMaskDataset(Dataset):
             lms_mask = np.delete(lms_mask, 2)
             lms_mask = np.delete(lms_mask, 3)
             lms_mask = np.append(lms_mask, merge_mask)
-        # img = cv2.cvtColor(img, cv2.COLOR_GRAY2RGB)
+
         img = cv2.merge([img, img, img])
         img = img.transpose((2, 0, 1))
         lms_heatmap = lms_heatmap.transpose((2, 0, 1))

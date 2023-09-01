@@ -52,7 +52,6 @@ def get_landmarks_from_heatmap(heatmaps, project='default', name=None):
     # Get x and y of landmarks
     for i in range(heatmaps.shape[0]):
         hm = heatmaps[i, :, :].cpu().numpy()
-        # hm = heatmaps[i, :, :]
         # replace the channel of non-existent landmark with np.zeros
         # 不是很合理的方法，依据为"'不存在的landmark的预测heatmap最大值会很小'，正常max值>0.8，不存在的landmark的max值较小"
         # LAT侧位中仅有4张图像hm.max()大于0.60，最高0.61，且多是P4
@@ -61,15 +60,15 @@ def get_landmarks_from_heatmap(heatmaps, project='default', name=None):
             print('%s: P%d, %f'% (name, i+1, hm.max()))
         if 'AP' in project and i==0 and hm.max() < 0.1:
             pos_y, pos_x = 0, 0
-        if 'LAT' in project and i==3:
-            pos_yx = np.argmax(hm)
-            pos_y, pos_x = np.unravel_index(pos_yx, hm.shape)
-            landmarks.append([pos_y, pos_x])
-            hm[pos_y, pos_x] = -999
-            pos_yx = np.argmax(hm)
-            pos_y, pos_x = np.unravel_index(pos_yx, hm.shape)
-            landmarks.append([pos_y, pos_x])
-            continue
+        # if 'LAT' in project and i==3:
+        #     pos_yx = np.argmax(hm)
+        #     pos_y, pos_x = np.unravel_index(pos_yx, hm.shape)
+        #     landmarks.append([pos_y, pos_x])
+        #     hm[pos_y, pos_x] = -999
+        #     pos_yx = np.argmax(hm)
+        #     pos_y, pos_x = np.unravel_index(pos_yx, hm.shape)
+        #     landmarks.append([pos_y, pos_x])
+        #     continue
         else:
             pos_yx = np.argmax(hm)
             pos_y, pos_x = np.unravel_index(pos_yx, hm.shape)
@@ -89,8 +88,9 @@ def visualize_heatmap(input, landmarks, landmarks_gt=None):
         ldm_name_list = ['P1-center of Scaphoid', 
                          'P2-center of remote Radius', 
                          'P3-center of proximal Radius', 
-                         'P4-center of remote Ulna', 
-                         'P5-center of proximal Ulna']
+                         'P3-center of remote Ulna', 
+                        #  'P5-center of proximal Ulna',
+                         'P4-point of proximal part ']
         ldm_color_list = [(255, 0, 0), (51, 255, 255), (0, 0, 255), (255, 255, 0), (255, 0, 255)]
     # img = np.transpose(input.cpu().numpy())[:,:,0]
     if torch.is_tensor(input):
@@ -110,6 +110,8 @@ def visualize_heatmap(input, landmarks, landmarks_gt=None):
             if y_pos == 0. and x_pos==0.:
                 continue
             cv2.circle(img, (x_pos, y_pos), 3, (0, 255, 0), -1)
+
+    lat_proximal = [0, 0]
     for idx, (y_pos, x_pos) in enumerate(landmarks):
         '''
             params:(image, (x_pos, y_pos), ...)
@@ -117,6 +119,16 @@ def visualize_heatmap(input, landmarks, landmarks_gt=None):
         '''
         if y_pos == 0. and x_pos==0.:
             continue
+        # get the midpoint in LAT
+        if len(landmarks)==5 and (idx==2 or idx==4):
+            lat_proximal[0] = int((lat_proximal[0] + y_pos) / (idx/2))
+            lat_proximal[1] = int((lat_proximal[1] + x_pos) / (idx/2))
+            if idx==2:
+                continue
+            if idx == 4:
+                cv2.circle(img, (lat_proximal[1], lat_proximal[0]), 3, ldm_color_list[idx], -1)
+                cv2.putText(img, ldm_name_list[idx], (lat_proximal[1]+10, lat_proximal[0]-10), cv2.FONT_HERSHEY_COMPLEX, 0.6, ldm_color_list[idx], 1)  
+                break
         cv2.circle(img, (x_pos, y_pos), 3, ldm_color_list[idx], -1)
         cv2.putText(img, ldm_name_list[idx], (x_pos+10, y_pos-10), cv2.FONT_HERSHEY_COMPLEX, 0.6, ldm_color_list[idx], 1)    
     
