@@ -12,6 +12,7 @@ from .misc import *
 import cv2
 from itertools import product
 from skimage import transform as sktrans
+import math
 
 img_size = 512
 
@@ -76,22 +77,226 @@ def get_landmarks_from_heatmap(heatmaps, project='default', name=None):
 
     return landmarks
 
+def visualize_in_evaluate(input, landmarks, pixelspacing):
+    # OpenCV B,G,R
+    if len(landmarks) == 3:
+        # ['P1-拇指指掌关节', 'P2-桡骨茎突', 'P3-尺骨茎突']
+        ldm_name_list = ['P1', 
+                         'P2', 
+                         'P3']
+        ldm_color_list = [(0, 0, 255), (0, 0, 255), (0, 0, 255)]
+    if len(landmarks) == 5:
+        # ['P1-舟骨中心', 'P2-桡骨远端中心', 'P3-桡骨近端中心', 'P4-尺骨远端中心', 'P5-尺骨近端中心']
+        # 模型实际会预测5个点，但是展示只用4个点，只显示[0,1,3]和 midpoint of [2,4]
+        ldm_name_list = ['P1', 
+                         'P2', 
+                         '',
+                         'P3', 
+                         'P4' # combine with proximal radius to cal the midpoint
+                         ]
+        ldm_color_list = [(0, 0, 255), (0, 0, 255), (0, 0, 255), (0, 0, 255), (0, 0, 255)]
+    # img = np.transpose(input.cpu().numpy())[:,:,0]
+    if torch.is_tensor(input):
+        img = input.cpu().numpy()[0, :, :]
+        img = 255 * (img - np.min(img)) / (np.max(img) - np.min(img))
+        img = img.astype(np.uint8)
+        img = cv2.merge([img, img, img])
+    else:
+        img = input
+    
+    lat_proximal = [0, 0]
+    # draw the key points first, then write out the measurement information
+    for idx, (y_pos, x_pos) in enumerate(landmarks):
+            '''
+                params:(image, (x_pos, y_pos), ...)
+                original point: left upside, right -> X, down-> Y
+            '''
+            if y_pos == 0. and x_pos==0.:
+                continue
+            # get the midpoint in LAT
+            if len(landmarks)==5 and (idx==2 or idx==4):
+                lat_proximal[0] = int((lat_proximal[0] + y_pos) / (idx/2))
+                lat_proximal[1] = int((lat_proximal[1] + x_pos) / (idx/2))
+                if idx == 2:
+                    continue
+                if idx == 4:
+                    cv2.circle(img, (lat_proximal[1], lat_proximal[0]), 5, ldm_color_list[idx], -1)
+                    cv2.putText(img, ldm_name_list[idx], (lat_proximal[1]+10, lat_proximal[0]-10), cv2.FONT_HERSHEY_COMPLEX, 1, ldm_color_list[idx], 1)  
+                    continue
+            cv2.circle(img, (x_pos, y_pos), 5, ldm_color_list[idx], -1)
+            cv2.putText(img, ldm_name_list[idx], (x_pos+10, y_pos-10), cv2.FONT_HERSHEY_COMPLEX, 1, ldm_color_list[idx], 1)    
+
+    '''
+        landmarks的坐标:(y, x), y轴从上到下, x轴从左到右
+        cv2作图时坐标系: (x, y),x轴从左向右, y轴从上到下
+        两个坐标原点都是左上角
+        所以在landmarks不作更改的情况下, 于cv2作图时, 需要将landmarks坐标对调
+    '''
+
+    def calculate_angle(point_1, point_2, point_3):
+        """
+        根据三点坐标计算夹角
+        :param point_1: 点1坐标
+        :param point_2: 点2坐标
+        :param point_3: 点3坐标
+        :return: 返回指定角的夹角值
+        """
+        a=math.sqrt((point_2[0]-point_3[0])*(point_2[0]-point_3[0])+(point_2[1]-point_3[1])*(point_2[1] - point_3[1]))
+        b=math.sqrt((point_1[0]-point_3[0])*(point_1[0]-point_3[0])+(point_1[1]-point_3[1])*(point_1[1] - point_3[1]))
+        c=math.sqrt((point_1[0]-point_2[0])*(point_1[0]-point_2[0])+(point_1[1]-point_2[1])*(point_1[1]-point_2[1]))
+        B=math.degrees(math.acos((b*b-a*a-c*c)/(-2*a*c)))
+        return B
+    
+    def DoubleArrowedLine(img, start, end, eval_color, pixelspacing):
+        # one line
+        cv2.line(img, (start[1], start[0]), (end[1], end[0]), eval_color, thickness=2)
+        # two branches
+        if start[1] == end[1]:
+            if end[0] == 0:
+                # top: 在cv2坐标系中, end已经落位, 对end的y都要增加, x一增一减
+                cv2.line(img, (end[1], end[0]), (end[1]-10, end[0]+10), (0, 0, 255), thickness=2)
+                cv2.line(img, (end[1], end[0]), (end[1]+10, end[0]+10), (0, 0, 255), thickness=2)
+                cv2.putText(img, "{:.2f}mm".format((start[0]-end[0])*pixelspacing), ( int((start[1]+end[1])/2), int((start[0]+end[0])/2) ), cv2.FONT_HERSHEY_COMPLEX, 1, eval_color, 1)
+            else:
+                # down
+                cv2.line(img, (end[1], end[0]), (end[1]-10, end[0]-10), (0, 0, 255), thickness=2)
+                cv2.line(img, (end[1], end[0]), (end[1]+10, end[0]-10), (0, 0, 255), thickness=2)
+                cv2.putText(img, "{:.2f}mm".format((end[0]-start[0])*pixelspacing), ( int((start[1]+end[1])/2), int((start[0]+end[0])/2) ), cv2.FONT_HERSHEY_COMPLEX, 1, eval_color, 1)
+        if start[0] == end[0]:
+            if end[1] == 0:
+                # left
+                cv2.line(img, (end[1], end[0]), (end[1]+10, end[0]-10), (0, 0, 255), thickness=2)
+                cv2.line(img, (end[1], end[0]), (end[1]+10, end[0]+10), (0, 0, 255), thickness=2)
+                cv2.putText(img, "{:.2f}mm".format((start[1]-end[1])*pixelspacing), ( int((start[1]+end[1])/2), int((start[0]+end[0])/2)-10 ), cv2.FONT_HERSHEY_COMPLEX, 1, eval_color, 1)
+            else:
+                # right
+                cv2.line(img, (end[1], end[0]), (end[1]-10, end[0]-10), (0, 0, 255), thickness=2)
+                cv2.line(img, (end[1], end[0]), (end[1]-10, end[0]+10), (0, 0, 255), thickness=2)
+                cv2.putText(img, "{:.2f}mm".format((end[1]-start[1])*pixelspacing), ( int((start[1]+end[1])/2), int((start[0]+end[0])/2)-10 ), cv2.FONT_HERSHEY_COMPLEX, 1, eval_color, 1)
+
+    eval_color = (0, 255, 0)
+    y_pixelspacing = pixelspacing[0]
+    x_pixelspacing = pixelspacing[1]
+
+    if len(landmarks) == 3:
+        p1 = landmarks[0]
+        p2 = landmarks[1]
+        p3 = landmarks[2]
+        ap_midpoint = ( int((p2[0]+p3[0])/2), int((p2[1]+p3[1])/2) )
+
+        # line of [p2 to p3]
+        cv2.line(img, (p2[1], p2[0]), (p3[1], p3[0]), (0, 0, 255), thickness=1)
+        DoubleArrowedLine(img, ap_midpoint, (0, ap_midpoint[1]), (0, 0, 255), pixelspacing=y_pixelspacing) # from midpoint to top
+        DoubleArrowedLine(img, ap_midpoint, (img.shape[0], ap_midpoint[1]), (0, 0, 255), pixelspacing=y_pixelspacing) # from midpoint to bottom
+        DoubleArrowedLine(img, ap_midpoint, (ap_midpoint[0], 0), (0, 0, 255), pixelspacing=x_pixelspacing) # from midpoint to left
+        DoubleArrowedLine(img, ap_midpoint, (ap_midpoint[0], img.shape[1]), (0, 0, 255), pixelspacing=x_pixelspacing) # from midpoint to right
+        # X-cross from midpoint
+        for point in[(ap_midpoint[1]+10, ap_midpoint[0]+10), 
+                     (ap_midpoint[1]-10, ap_midpoint[0]+10), 
+                     (ap_midpoint[1]-10, ap_midpoint[0]-10), 
+                     (ap_midpoint[1]+10, ap_midpoint[0]-10)]:
+            cv2.line(img, (ap_midpoint[1], ap_midpoint[0]), point, (0, 0, 255), thickness=2) # bottom right
+            cv2.line(img, (ap_midpoint[1], ap_midpoint[0]), point, (0, 0, 255), thickness=2) # bottom left
+            cv2.line(img, (ap_midpoint[1], ap_midpoint[0]), point, (0, 0, 255), thickness=2) # top left
+            cv2.line(img, (ap_midpoint[1], ap_midpoint[0]), point, (0, 0, 255), thickness=2) # top right
+
+        # this means that it's vertical
+        if img.shape[0] >= img.shape[1]:
+            if p2[1] < p3[1]:
+                l, r = p2, p3
+            else:
+                l, r = p3, p2
+            DoubleArrowedLine(img, l, (l[0], 0), eval_color, pixelspacing=x_pixelspacing) # left to edge
+            cv2.line(img, (l[1], l[0]), (l[1]-10, l[0]+10), (0, 0, 255), thickness=2) # left back to 'l'
+            cv2.line(img, (l[1], l[0]), (l[1]-10, l[0]-10), (0, 0, 255), thickness=2) # left back to 'l'
+            DoubleArrowedLine(img, r, (r[0], img.shape[1]), eval_color, pixelspacing=x_pixelspacing) # right to edge
+            cv2.line(img, (r[1], r[0]), (r[1]+10, r[0]+10), (0, 0, 255), thickness=2) # right back to 'r'
+            cv2.line(img, (r[1], r[0]), (r[1]+10, r[0]-10), (0, 0, 255), thickness=2) # right back to 'r'
+
+            if r[0] > ap_midpoint[0]: # The right point is below the midpoint in cv2-coordinate-system
+                start_angle = calculate_angle(r, ap_midpoint, (ap_midpoint[0], img.shape[1])) # cal angle: r-midpoint-right
+                end_angle = 90
+            else:
+                start_angle = -calculate_angle(r, ap_midpoint, (ap_midpoint[0], img.shape[1])) # cal angle: r-midpoint-right
+                end_angle = -90
+            cv2.ellipse(img, (ap_midpoint[1], ap_midpoint[0]), (30, 30), 0, start_angle, end_angle, (0, 255, 0), 1)
+            cv2.putText(img, "{:d} deg".format(int(abs(end_angle-start_angle))), ( ap_midpoint[1]-30, ap_midpoint[0]-30 ), cv2.FONT_HERSHEY_COMPLEX_SMALL, 1, eval_color, 1) # write angle
+        
+        # this means that it's horizontal
+        if img.shape[0] < img.shape[1]:
+            if p2[0] < p3[0]:
+                t, b = p2, p3
+            else:
+                t, b = p3, p2
+            DoubleArrowedLine(img, t, (0, t[1]), eval_color, pixelspacing=y_pixelspacing) # up to top
+            cv2.line(img, (t[1], t[0]), (t[1]+10, t[0]-10), (0, 0, 255), thickness=2) # top back to 't'
+            cv2.line(img, (t[1], t[0]), (t[1]-10, t[0]-10), (0, 0, 255), thickness=2) # top back to 't'
+            DoubleArrowedLine(img, b, (img.shape[0], b[1]), eval_color, pixelspacing=y_pixelspacing) # down to bottom
+            cv2.line(img, (b[1], b[0]), (b[1]-10, b[0]+10), (0, 0, 255), thickness=2) # down back to 'b'
+            cv2.line(img, (b[1], b[0]), (b[1]+10, b[0]+10), (0, 0, 255), thickness=2) # down back to 'b'
+
+            #TODO:只从top点开始画，根据和垂直线的关系决定往左还是往右画弧
+        cv2.circle(img, (ap_midpoint[1], ap_midpoint[0]), 5, [255, 255, 255], -1)
+
+
+    if len(landmarks)==5:
+        p1 = landmarks[0]
+        p2 = landmarks[1]
+        p3 = landmarks[2]
+        p4 = landmarks[3]
+        p5 = landmarks[4]
+        lat_proximal = ( int((p3[0]+p5[0])/2), int((p3[1]+p5[1])/2) )
+        
+        DoubleArrowedLine(img, p1, (0, p1[1]), eval_color, pixelspacing=y_pixelspacing) # from p1 to top
+        DoubleArrowedLine(img, p1, (img.shape[0], p1[1]), eval_color, pixelspacing=y_pixelspacing) # from p1 to down
+        DoubleArrowedLine(img, p1, (p1[0], 0), eval_color, pixelspacing=x_pixelspacing) # from p1 to left
+        DoubleArrowedLine(img, p1, (p1[0], img.shape[1]), eval_color, pixelspacing=x_pixelspacing) # from p1 to right
+
+        # X-cross from p1
+        for point in[(p1[1]+10, p1[0]+10), 
+                     (p1[1]-10, p1[0]+10), 
+                     (p1[1]-10, p1[0]-10), 
+                     (p1[1]+10, p1[0]-10)]:
+            cv2.line(img, (p1[1], p1[0]), point, (0, 0, 255), thickness=2) # bottom right
+            cv2.line(img, (p1[1], p1[0]), point, (0, 0, 255), thickness=2) # bottom left
+            cv2.line(img, (p1[1], p1[0]), point, (0, 0, 255), thickness=2) # top left
+            cv2.line(img, (p1[1], p1[0]), point, (0, 0, 255), thickness=2) # top right
+
+        cv2.line(img, (p1[1], p1[0]), (lat_proximal[1], lat_proximal[0]), (0, 0, 255), thickness=2) # from p1 to lat_proximal
+        cv2.line(img, (p1[1], p1[0]), (p2[1], p2[0]), (0, 0, 255), thickness=2) # from p1 to p2
+        cv2.line(img, (p1[1], p1[0]), (p4[1], p4[0]), (0, 0, 255), thickness=2) # from p1 to p4
+
+        # write the angle truthfully without requiring acute angles
+        if lat_proximal[0] > p1[0]: # lat_proximal is below p1
+            start_angle = calculate_angle(lat_proximal, p1, (p1[0], img.shape[1])) # cal angle: lat_proximal-p1-right
+            end_angle = 90
+            cv2.ellipse(img, (p1[1], p1[0]), (50, 50), 0, start_angle, end_angle, (0, 255, 0), 1)
+            cv2.putText(img, "{:d} deg".format(int(abs(end_angle-start_angle))), ( p1[1]+50, p1[0]+50 ), cv2.FONT_HERSHEY_COMPLEX_SMALL, 1, eval_color, 1) # write angle
+        if lat_proximal[0] < p1[0]: # lat_proximal is above p1
+            start_angle = -calculate_angle(lat_proximal, p1, (p1[0], img.shape[1])) # cal angle: lat_proximal-p1-right
+            end_angle = -90
+            cv2.ellipse(img, (p1[1], p1[0]), (50, 50), 0, start_angle, end_angle, (0, 255, 0), 1)
+            cv2.putText(img, "{:d} deg".format(int(abs(end_angle-start_angle))), ( p1[1]-50, p1[0]-50 ), cv2.FONT_HERSHEY_COMPLEX_SMALL, 1, eval_color, 1) # write angle 
+    
+    return img
+
 def visualize_heatmap(input, landmarks, landmarks_gt=None):
     if len(landmarks) == 3:
         # ['P1-拇指指掌关节', 'P2-桡骨茎突', 'P3-尺骨茎突']
         ldm_name_list = ['P1-metacarpophalangeal joint', 
                          'P2-styloid process of Radius', 
                          'P3-styloid process of Ulna']
-        ldm_color_list = [(255, 0, 0), (51, 255, 255), (0, 0, 255)]
+        ldm_color_list = [(0, 0, 255), (255, 0, 0),  (255, 255, 0)]
     if len(landmarks) == 5:
         # ['P1-舟骨中心', 'P2-桡骨远端中心', 'P3-桡骨近端中心', 'P4-尺骨远端中心', 'P5-尺骨近端中心']
+        # 模型实际会预测5个点，但是展示只用4个点，只显示[0,1,3]和 midpoint of [2,4]        
         ldm_name_list = ['P1-center of Scaphoid', 
                          'P2-center of remote Radius', 
-                         'P3-center of proximal Radius', 
-                         'P3-center of remote Ulna', 
-                        #  'P5-center of proximal Ulna',
-                         'P4-point of proximal part ']
-        ldm_color_list = [(255, 0, 0), (51, 255, 255), (0, 0, 255), (255, 255, 0), (255, 0, 255)]
+                         'center of proximal Radius',
+                         'P3-center of remote Ulna',
+                         'P4-point of proximal part' # combine with proximal radius to cal the midpoint
+                         ]
+        ldm_color_list = [(0, 0, 255), (255, 0, 0), (0, 0, 0), (255, 255, 0), (51, 255, 255)]
     # img = np.transpose(input.cpu().numpy())[:,:,0]
     if torch.is_tensor(input):
         img = input.cpu().numpy()[0, :, :]
@@ -101,6 +306,7 @@ def visualize_heatmap(input, landmarks, landmarks_gt=None):
     else:
         img = input
     # draw landmarks on image
+    lat_proximal = [0, 0]
     if landmarks_gt is not None:
         for idx, (y_pos, x_pos) in enumerate(landmarks_gt):
             '''
@@ -109,6 +315,15 @@ def visualize_heatmap(input, landmarks, landmarks_gt=None):
             '''
             if y_pos == 0. and x_pos==0.:
                 continue
+            # get the midpoint in LAT
+            if len(landmarks_gt)==5 and (idx==2 or idx==4):
+                lat_proximal[0] = int((lat_proximal[0] + y_pos) / (idx/2))
+                lat_proximal[1] = int((lat_proximal[1] + x_pos) / (idx/2))
+                if idx == 2:
+                    continue
+                if idx == 4:
+                    cv2.circle(img, (lat_proximal[1], lat_proximal[0]), 3, (0, 255, 0), -1)
+                    break
             cv2.circle(img, (x_pos, y_pos), 3, (0, 255, 0), -1)
 
     lat_proximal = [0, 0]
@@ -123,14 +338,14 @@ def visualize_heatmap(input, landmarks, landmarks_gt=None):
         if len(landmarks)==5 and (idx==2 or idx==4):
             lat_proximal[0] = int((lat_proximal[0] + y_pos) / (idx/2))
             lat_proximal[1] = int((lat_proximal[1] + x_pos) / (idx/2))
-            if idx==2:
+            if idx == 2:
                 continue
             if idx == 4:
                 cv2.circle(img, (lat_proximal[1], lat_proximal[0]), 3, ldm_color_list[idx], -1)
-                cv2.putText(img, ldm_name_list[idx], (lat_proximal[1]+10, lat_proximal[0]-10), cv2.FONT_HERSHEY_COMPLEX, 0.6, ldm_color_list[idx], 1)  
+                cv2.putText(img, ldm_name_list[idx], (lat_proximal[1]+10, lat_proximal[0]-10), cv2.FONT_HERSHEY_COMPLEX, 1, ldm_color_list[idx], 1)  
                 break
         cv2.circle(img, (x_pos, y_pos), 3, ldm_color_list[idx], -1)
-        cv2.putText(img, ldm_name_list[idx], (x_pos+10, y_pos-10), cv2.FONT_HERSHEY_COMPLEX, 0.6, ldm_color_list[idx], 1)    
+        cv2.putText(img, ldm_name_list[idx], (x_pos+10, y_pos-10), cv2.FONT_HERSHEY_COMPLEX, 1, ldm_color_list[idx], 1)    
     
     return img
 

@@ -3,8 +3,8 @@
 @Init Date  : 2023-04-18 16:38
 @File       : xray_classify_dataset.py
 @IDE        : PyCharm
-@Description: 0->[0, 1] 无异物伪影 / 尺桡骨不重叠
-              1->[1, 0] 有异物伪影 / 尺桡骨重叠
+@Description: 0->[0, 1] 无异物伪影 / 尺桡骨不重叠 / 侧位
+              1->[1, 0] 有异物伪影 / 尺桡骨重叠 / 正位
 '''
 import os
 import cv2
@@ -37,7 +37,6 @@ class XrayClassifyDataset(Dataset):
         '''
         # h = img.shape[0]
         # w = img.shape[1]
-        # img_size = (w // 32 * 32, h // 32 * 32)
         img = cv2.resize(img, self.img_size)
         # cv2.imwrite('./'+self.imgs_list[index].strip(), img) 
         # print('resize:%d %d --> %d %d' % (h, w, img_size[1], img_size[0]))

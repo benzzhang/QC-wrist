@@ -1,7 +1,7 @@
 '''
 Date: 2023-04-21 10:52:12
 LastEditors: zhangjian zhangjian@cecinvestment.com
-LastEditTime: 2023-08-31 16:22:40
+LastEditTime: 2023-09-10 13:13:32
 FilePath: /QC-wrist/train_landmark.py
 Description: Copyright (c) Pengbo, 2022
             Landmarks detection model, using DATASET 'WristLandmarkMaskDataset'
@@ -43,8 +43,8 @@ def main(config_file):
     print('==> Preparing dataset %s' % data_config['type'])
     # create dataset for training and validating
     if 'LAT' in common_config['project']:
-        # merge = True
-        merge = False
+        merge = True
+    merge = False
     trainset = dataset.__dict__[data_config['type']](
         data_config['train_list'], data_config['train_meta'], augment_config,
         prefix=data_config['prefix'], size=(data_config['W_size'], data_config['H_size']), merge=merge)
@@ -107,14 +107,6 @@ def main(config_file):
             return res
         
         radial_error = flat(radial_errors)
-        # frequency histogram
-        d = 5  # 组距
-        num_bins = (max(radial_error)-min(radial_error)) // d
-        plt.figure(figsize=(20, 8), dpi=80) # 设置图形大小
-        plt.hist(radial_error, int(num_bins), density=True)
-        plt.xticks(range(int(min(radial_error)), int(max(radial_error))+d, d))  # 设置x轴刻度
-        plt.grid(alpha=0.4) # 设置网格
-        plt.savefig(os.path.join(common_config['save_path'], 'MRE-density.png'), dpi=300, bbox_inches='tight')
 
         # percentile
         p = [50, 80, 85, 90, 95]

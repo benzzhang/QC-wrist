@@ -1,7 +1,7 @@
 '''
 Date: 2023-05-26 14:08:13
 LastEditors: zhangjian zhangjian@cecinvestment.com
-LastEditTime: 2023-08-10 10:11:57
+LastEditTime: 2023-09-08 16:04:08
 FilePath: /QC-wrist/eval/point_judge.py
 Description:
 
@@ -11,54 +11,67 @@ import math
 import numpy as np
 
 
-# 翻转图片到同一视角 --> 指掌关节位于左上角, 舟骨在上方
-def flip_AP(p1, p2, p3, size):
-    if p2[1] < p1[1] and p3[1] < p1[1]:
-        if (p2[0]+p3[0])/2 < p1[0]:
-            p1[1] = size - p1[1]
-            p2[1] = size - p2[1]
-            p3[1] = size - p3[1]
+# 翻转图片到同一正常视角
+# --> 左上角为坐标原点，向右x轴，向下y轴 
+# --> right position should be AP指掌关节位于左上角, LAT舟骨在上方
 
+# AP的指掌关节一定在茎突连线中点的某一侧
+def flip_AP(p1, p2, p3, size):
+    # 茎突在指掌关节上方
+    if p2[1] < p1[1] and p3[1] < p1[1]:
+        # 茎突在指掌关节左上方：顺时针转了180°
+        if (p2[0]+p3[0])/2 < p1[0]:
+            p1 = (size[0]-p1[0], size[1]-p1[1])
+            p2 = (size[0]-p2[0], size[1]-p2[1])
+            p3 = (size[0]-p3[0], size[1]-p3[1])
+        
+        # 茎突在执掌关节右上侧：逆时针转了90°
         if (p2[0]+p3[0])/2 > p1[0]:
             p1 = (size[1]-p1[1], p1[0])
             p2 = (size[1]-p2[1], p2[0])
             p3 = (size[1]-p3[1], p3[0])
             size = (size[1], size[0])
 
+    # 茎突在执掌关节左下方：顺时针转了90°
     if p2[0] < p1[0] and p3[0] < p1[0]:
-        p1 = (p1[1], size[0]-p1[0])
-        p2 = (p2[1], size[0]-p2[0])
-        p3 = (p3[1], size[0]-p3[0])
+        p1 = (size[1]-p1[1], size[0]-p1[0])
+        p2 = (size[1]-p2[1], size[0]-p2[0])
+        p3 = (size[1]-p3[1], size[0]-p3[0])
         size = (size[1], size[0])
 
     return p1, p2, p3, size
 
+# LAT的舟骨中心一定在视野中部，近心端围绕舟骨中心作旋转可能，根据相对位置及与Y轴夹角分类
 def flip_LAT(p1, p2, p3, p4, p5, size):
-    if p1[1]>p2[1] and p2[1]>p3[1]:
-        if (p2[1]-p3[1])>(size[1]*0.2):
-            p1[1] = size - p1[1]
-            p2[1] = size - p2[1]
-            p3[1] = size - p3[1]
-            p4[1] = size - p4[1]
-            p5[1] = size - p5[1]
+    midpoint = ( (p3[0]+p5[0])/2, (p3[1]+p5[1])/2 )
+    vec = [abs(midpoint[0] - p1[0]),
+           abs(midpoint[1] - p1[1])]
 
-    if p1[0]<p2[0] and p2[0]<p3[0]:
-        if (p3[0]-p2[0])>(size[0]*0.2):
-            p1 = (size[1]-p1[1], p1[0])
-            p2 = (size[1]-p2[1], p2[0])
-            p3 = (size[1]-p3[1], p3[0])
-            p4 = (size[1]-p4[1], p4[0])
-            p5 = (size[1]-p5[1], p5[0])
-            size = (size[1], size[0])
+    # 顺时针转了180°
+    if midpoint[1] < p1[1] and np.rad2deg(math.atan(vec[0] / vec[1]))<45:
+        p1 = (size[0]-p1[0], size[1]-p1[1])
+        p2 = (size[0]-p2[0], size[1]-p2[1])
+        p3 = (size[0]-p3[0], size[1]-p3[1])
+        p4 = (size[0]-p4[0], size[1]-p4[1])
+        p5 = (size[0]-p5[0], size[1]-p5[1])
 
-    if p1[0]>p2[0] and p2[0]>p3[0]:
-        if (p2[0]-p1[0])>(size[0]*0.2):
-            p1 = (p1[1], size[0]-p1[0])
-            p2 = (p2[1], size[0]-p2[0])
-            p3 = (p3[1], size[0]-p3[0])
-            p4 = (p4[1], size[0]-p4[0])
-            p5 = (p5[1], size[0]-p5[0])
-            size = (size[1], size[0])
+    # 顺时针转了90°
+    if midpoint[0] < p1[0] and np.rad2deg(math.atan(vec[1] / vec[0]))<45:
+        p1 = (size[1]-p1[1], size[0]-p1[0])
+        p2 = (size[1]-p2[1], size[0]-p2[0])
+        p3 = (size[1]-p3[1], size[0]-p3[0])
+        p4 = (size[1]-p4[1], size[0]-p4[0])
+        p5 = (size[1]-p5[1], size[0]-p5[0])
+        size = (size[1], size[0])
+
+    # 逆时针转了90°
+    if midpoint[0] > p1[0] and np.rad2deg(math.atan(vec[1] / vec[0]))<45:
+        p1 = (size[1]-p1[1], p1[0])
+        p2 = (size[1]-p2[1], p2[0])
+        p3 = (size[1]-p3[1], p3[0])
+        p4 = (size[1]-p4[1], p4[0])
+        p5 = (size[1]-p5[1], p5[0])
+        size = (size[1], size[0])
 
     return p1, p2, p3, p4, p5, size
 
@@ -69,7 +82,7 @@ def metacarpophalangeal_joint_is_included(p1):
     if p1[0]==0 and p1[1]==0:
         return 0
     else:
-        return 10
+        return 7
 
 '''
     尺桡骨茎突连线中点是否位于图像正中（上下、左右差值<1cm）
@@ -83,9 +96,9 @@ def midpoint_of_StyloidProcess_is_center(p1, p2, pixelspacing, size):
     
     score = 0
     if gap_x < 1:
-        score += 2.5
+        score += 4
     if gap_y < 1:
-        score += 2.5
+        score += 4
 
     return score
 
@@ -102,7 +115,7 @@ def line_of_StyloidProcess_is_horizontal(p1, p2):
     if angle_yaxis < 85:
         score = 0
     else:
-        score = int(angle_yaxis - 85) + 1
+        score = round((angle_yaxis-85) * (7/5)) + 1
     return score
 
 '''
@@ -121,7 +134,7 @@ def include_radius_ulna(p1, p2, pixelspacing, size):
     else:
         d1 = abs(distance_from_lowest - 3)
         d2 = abs(distance_from_lowest - 5)
-        score = (1 - (abs(d1 - d2) / 2)) *5
+        score = round((1 - (abs(d1 - d2) / 2)) * 6) + 1
         
     return score
 
@@ -131,11 +144,11 @@ def include_radius_ulna(p1, p2, pixelspacing, size):
 def distance_from_StyloidProcess_to_edge(p1, p2, pixelspacing, size):
     # units: cm
     if p1[0] > p2[0]:
-        l = p1
-        r = p2
-    else:
-        l = p2
         r = p1
+        l = p2
+    else:
+        r = p2
+        l = p1
         
     distance_l = l[0] * pixelspacing[1] * 0.1
     distance_r = (size[0] - r[0]) * pixelspacing[1] * 0.1
@@ -147,7 +160,7 @@ def distance_from_StyloidProcess_to_edge(p1, p2, pixelspacing, size):
     else:
         d1 = abs(distance_l - 3)
         d2 = abs(distance_l - 5)
-        score = (1 - (abs(d1 - d2) / 2)) *2.5
+        score = round((1 - (abs(d1 - d2) / 2)) * 2) + 1
 
     if distance_r < 3:
         score += 0
@@ -156,7 +169,7 @@ def distance_from_StyloidProcess_to_edge(p1, p2, pixelspacing, size):
     else:
         d1 = abs(distance_r - 3)
         d2 = abs(distance_r - 5)
-        score += (1 - (abs(d1 - d2) / 2)) *2.5
+        score += round((1 - (abs(d1 - d2) / 2)) * 2) + 1
         
     return score
 
@@ -171,9 +184,9 @@ def Scaphoid_is_center(p1, pixelspacing, size):
     
     score = 0
     if gap_x < 1:
-        score += 2.5
+        score += 4.5
     if gap_y < 1:
-        score += 2.5
+        score += 4.5
 
     return score
 
@@ -192,11 +205,11 @@ def line_of_LongAxis_is_vertical(p1, p2, p3):
     if angle_yaxis > 10:
         score = 0
     else:
-        score = int(10 - angle_yaxis) + 1
+        score = round((10 - angle_yaxis) * (8/10)) + 1
     return score
 
 '''
-    尺桡骨重叠
+    尺桡骨重叠(abandoned)
 '''
 def radius_and_ulna_overlap(p1, p2, p3, p4):
 
@@ -229,7 +242,7 @@ def radius_and_ulna_overlap(p1, p2, p3, p4):
     is_intersecting = Intersect(l1, l2)
 
     if is_intersecting:
-        score = 2.5
+        score = 9
     else:
         score = 0
     return score
@@ -246,7 +259,7 @@ def distal_radius_and_ulna_overlap(p1, p2, p3):
     angleA = np.rad2deg(math.acos(cosA))
 
     if angleA < 45:
-        score = 2.5
+        score = 9
     else:
         score = 0
     return score

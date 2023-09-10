@@ -1,4 +1,5 @@
-dcmfile_path: ./inference_task
+dcmfile_path: ./inference_task/
+save_path : ./inference_result/
 
 arch_classify: MobileNet_v2_onecls
 arch_lanmarks: GLNet 
@@ -8,6 +9,7 @@ num_classes_classify: 2
 num_classes_AP: 3
 num_classes_LAT: 5
 
+file_classify_position: model_best_wrist-classify-position.pth.tar
 file_classify_artifact: model_best_wrist-classify-artifact.pth.tar
 file_classify_overlap: model_best_wrist-classify-overlap.pth.tar
 file_landmarks_AP: model_best_wrist-landmarks-AP.pth.tar
@@ -19,7 +21,3 @@ size_classify:
 size_landmarks: 
   W : 640
   H : 1280
-
-type: WristLandmarkMaskInferenceDataset
-prefix: inference_task/
-inference_batch: 4

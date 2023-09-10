@@ -105,7 +105,7 @@ def main(config_file):
     if args.visualize:
         checkpoints = torch.load(os.path.join('checkpoints/', 'model_best_{}.pth.tar'.format(common_config['project'])))
         model.load_state_dict(checkpoints['state_dict'], False)
-        valid_loss, valid_acc, valid_sens, valid_spec, valid_prec, auc, ci_95 = vaild(validloader, model, criterion, use_cuda)
+        valid_loss, valid_acc, valid_sens, valid_spec, valid_prec, auc, ci_95 = vaild(validloader, model, criterion, use_cuda, visualize=args.visualize)
 
         save_folder = os.path.join(common_config['save_path'], 'visualized_results/')
         mkdir_p(save_folder)
@@ -138,8 +138,7 @@ def main(config_file):
 
         print('\nEpoch: [%d | %d] LR: %f' % (epoch + 1, common_config['epoch'], common_config['lr']))
         train_loss, train_acc = train(trainloader, model, criterion, optimizer, use_cuda)
-        valid_loss, valid_acc, _, _, _, _, _ = vaild(validloader, model, criterion, use_cuda)
-        # valid_loss, valid_acc = vaild(validloader, model, criterion, use_cuda)
+        valid_loss, valid_acc = vaild(validloader, model, criterion, use_cuda)
         # append logger file
         logger.append([common_config['lr'], train_loss, valid_loss, train_acc, valid_acc])
         # save model
@@ -201,7 +200,7 @@ def train(trainloader, model, criterion, optimizer, use_cuda):
     return (losses.avg, acc.avg)
 
 
-def vaild(validloader, model, criterion, use_cuda):
+def vaild(validloader, model, criterion, use_cuda, visualize=None):
     # switch to evaluate mode
     model.eval()
 
@@ -236,19 +235,20 @@ def vaild(validloader, model, criterion, use_cuda):
 
         predict = outputs > 0.5
         predict_acc = [torch.equal(a, b) for a, b in zip(predict, targets)]
-        predict_sens = [torch.equal(a, b) for a, b in zip(predict, targets) if torch.equal(b, torch.FloatTensor([1., 0.]).cuda())]
-        predict_spec = [torch.equal(a, b) for a, b in zip(predict, targets) if torch.equal(b, torch.FloatTensor([0., 1.]).cuda())]
-        predict_prec = [torch.equal(a, b) for a, b in zip(predict, targets) if torch.equal(a, torch.FloatTensor([1., 0.]).cuda())]
-        # print(len(predict_sens), len(predict_spec), len(predict_prec))
+        if visualize:
+            predict_sens = [torch.equal(a, b) for a, b in zip(predict, targets) if torch.equal(b, torch.FloatTensor([1., 0.]).cuda())]
+            predict_spec = [torch.equal(a, b) for a, b in zip(predict, targets) if torch.equal(b, torch.FloatTensor([0., 1.]).cuda())]
+            predict_prec = [torch.equal(a, b) for a, b in zip(predict, targets) if torch.equal(a, torch.FloatTensor([1., 0.]).cuda())]
+            if len(predict_sens) != 0:
+                sens.update(sum(predict_sens) / len(predict_sens), len(predict_sens))
+            if len(predict_spec) != 0:
+                spec.update(sum(predict_spec) / len(predict_spec), len(predict_spec))
+            if len(predict_prec) != 0:
+                prec.update(sum(predict_prec) / len(predict_prec), len(predict_prec))
 
+        # print(len(predict_sens), len(predict_spec), len(predict_prec))
         losses.update(loss.item(), inputs.size(0))
         acc.update(sum(predict_acc) / len(predict_acc), len(predict_acc))
-        if len(predict_sens) != 0:
-            sens.update(sum(predict_sens) / len(predict_sens), len(predict_sens))
-        if len(predict_spec) != 0:
-            spec.update(sum(predict_spec) / len(predict_spec), len(predict_spec))
-        if len(predict_prec) != 0:
-            prec.update(sum(predict_prec) / len(predict_prec), len(predict_prec))
         
         progress_bar(batch_idx, len(validloader), 'Loss: %.2f | Acc: %.2f' % (losses.avg, acc.avg))
 
@@ -256,30 +256,33 @@ def vaild(validloader, model, criterion, use_cuda):
         batch_time.update(time.time() - end)
         end = time.time()
     
-    # 抽样1000次计算CI
-    labelList_CI = []
-    predList_CI = []
-    auc_values = []
-    idx_list = list(np.arange(len(labelList)))
-    for i in np.arange(1000):
-        idx = random.sample(idx_list, int(len(labelList)*0.7))
-        idx = list(idx)
-        for j in idx:
-            labelList_CI.append(labelList[j])
-            predList_CI.append(predList[j])
-        labelArray = np.array(labelList_CI)
-        predArray = np.array(predList_CI)
-        roc_auc = sklearn.metrics.roc_auc_score(labelArray, predArray)
-        auc_values.append(roc_auc)
-    ci_95 = np.percentile(auc_values, (2.5, 97.5))
+    if visualize:
+        # 抽样1000次计算CI
+        labelList_CI = []
+        predList_CI = []
+        auc_values = []
+        idx_list = list(np.arange(len(labelList)))
+        for i in np.arange(1000):
+            idx = random.sample(idx_list, int(len(labelList)*0.7))
+            idx = list(idx)
+            for j in idx:
+                labelList_CI.append(labelList[j])
+                predList_CI.append(predList[j])
+            labelArray = np.array(labelList_CI)
+            predArray = np.array(predList_CI)
+            roc_auc = sklearn.metrics.roc_auc_score(labelArray, predArray)
+            auc_values.append(roc_auc)
+        ci_95 = np.percentile(auc_values, (2.5, 97.5))
 
-    # 计算FPR、TPR, 输出AUC(95%CI)
-    fpr, tpr, _ = sklearn.metrics.roc_curve(np.array(labelList), np.array(predList))
-    auc = round(sklearn.metrics.auc(fpr, tpr), 4)
-    ci_95 = (round(ci_95[0], 4), round(ci_95[1], 4))
+        # 计算FPR、TPR, 输出AUC(95%CI)
+        fpr, tpr, _ = sklearn.metrics.roc_curve(np.array(labelList), np.array(predList))
+        auc = round(sklearn.metrics.auc(fpr, tpr), 4)
+        ci_95 = (round(ci_95[0], 4), round(ci_95[1], 4))
 
-    return (losses.avg, acc.avg, sens.avg, spec.avg, prec.avg, auc, ci_95)
-    # return (losses.avg, acc.avg)
+        return (losses.avg, acc.avg, sens.avg, spec.avg, prec.avg, auc, ci_95)
+    
+    else:
+        return (losses.avg, acc.avg)
 
 
 def adjust_learning_rate(optimizer, epoch):
@@ -296,7 +299,8 @@ if __name__ == '__main__':
     parser = argparse.ArgumentParser(description='Classify for Medical Image')
     # model related, including  Architecture, path, datasets
     # parser.add_argument('--config-file', type=str, default='configs/config_classify_artifact.yaml')
-    parser.add_argument('--config-file', type=str, default='configs/config_classify_overlap.yaml')
+    parser.add_argument('--config-file', type=str, default='configs/config_classify_position.yaml')
+    # parser.add_argument('--config-file', type=str, default='configs/config_classify_overlap.yaml')
     parser.add_argument('--gpu-id', type=str, default='0,1,2')
     parser.add_argument('--visualize', action='store_false')
     args = parser.parse_args()
