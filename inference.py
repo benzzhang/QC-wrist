@@ -1,7 +1,7 @@
 '''
 Date: 2023-05-26 10:19:09
 LastEditors: zhangjian zhangjian@cecinvestment.com
-LastEditTime: 2023-09-10 22:52:40
+LastEditTime: 2023-09-12 16:27:50
 FilePath: /QC-wrist/inference.py
 Description: 
 '''
@@ -18,7 +18,7 @@ import cv2
 
 import models
 from utils import get_landmarks_from_heatmap, visualize_in_evaluate
-from eval import is_position_mark, flip_AP, flip_LAT, midpoint_of_StyloidProcess_is_center, line_of_LongAxis_is_vertical,\
+from eval import is_position_mark, midpoint_of_StyloidProcess_is_center, line_of_LongAxis_is_vertical,\
 include_radius_ulna, distance_from_StyloidProcess_to_edge, Scaphoid_is_center, line_of_StyloidProcess_is_horizontal,\
 basic_information_completed, dose, radius_and_ulna_overlap, distal_radius_and_ulna_overlap, metacarpophalangeal_joint_is_included
 
@@ -153,7 +153,7 @@ def inference(models, prending_list):
             actual_coordinate.append(ac)
 
         PixelSpacing = df.data_element('PixelSpacing').value
-        PixelSpacing = [float(PixelSpacing._list[0]),float(PixelSpacing._list[1])]
+        PixelSpacing = [float(PixelSpacing._list[0]), float(PixelSpacing._list[1])]
         img = visualize_in_evaluate(input=cv2.merge([scaled_df_pixel, scaled_df_pixel, scaled_df_pixel]),
                                         landmarks=actual_coordinate,
                                         pixelspacing=PixelSpacing)
@@ -172,8 +172,13 @@ def evaluate_each(dcmfile, coordinate, overlap, score_dict):
     '''
     # This PixelSpacing is a 'relative PixelSpacing' in the resized img
     PixelSpacing = df.data_element('PixelSpacing').value
-    PixelSpacing = [float(PixelSpacing._list[0]),float(PixelSpacing._list[1])]
-    PixelSpacing = [PixelSpacing[0] * (size[0] / config['size_landmarks']['H']), PixelSpacing[1] * (size[1] / config['size_landmarks']['W'])]
+    PixelSpacing = [float(PixelSpacing._list[0]), float(PixelSpacing._list[1])]
+
+    actual_coordinate = []
+    for c in coordinate:
+        ac = [(c[0]/config['size_landmarks']['H'])*size[0], (c[1]/config['size_landmarks']['W'])*size[1]]
+        ac = [int(ac[0]), int(ac[1])]
+        actual_coordinate.append(ac)
 
     '''
         PixelSpacing: (H, W) = (y, x)
@@ -181,59 +186,51 @@ def evaluate_each(dcmfile, coordinate, overlap, score_dict):
         size: (H, W) = (y, x)
         'needed to reverse them'
     '''
-    size = [size[1], size[0]]
-    PixelSpacing = [PixelSpacing[1], PixelSpacing[0]]
-    for idx, point in enumerate(coordinate):
-        coordinate[idx] = [point[1], point[0]]
 
     if overlap is None:
-        p1 = coordinate[0]
-        p2 = coordinate[1]
-        p3 = coordinate[2]
-
-        p1, p2, p3, size = flip_AP(p1, p2, p3, size)
+        p1 = actual_coordinate[0]
+        p2 = actual_coordinate[1]
+        p3 = actual_coordinate[2]
 
         s1 = metacarpophalangeal_joint_is_included(p1)
-        s2 = midpoint_of_StyloidProcess_is_center(p2, p3, PixelSpacing, size)
-        s3 = line_of_StyloidProcess_is_horizontal(p2, p3)
-        s4 = include_radius_ulna(p2, p3, PixelSpacing, size)
-        s5 = distance_from_StyloidProcess_to_edge(p2, p3, PixelSpacing, size)
+        s2, gap0, gap1 = midpoint_of_StyloidProcess_is_center(p2, p3, PixelSpacing, size)
+        s3, angle_yaxis = line_of_StyloidProcess_is_horizontal(p2, p3, size)
+        s4, distance_from_lowest = include_radius_ulna(p1, p2, p3, PixelSpacing, size)
+        s5, distance_l, distance_r = distance_from_StyloidProcess_to_edge(p2, p3, PixelSpacing, size)
         layout_score = s1 + s2 + s3 + s4 + s5
         
         score_dict['上缘包含拇指指掌关节'] = s1
-        score_dict['尺桡骨茎突连线中点位于图像正中'] = s2
-        score_dict['尺桡骨茎突连线与图像纵轴垂直'] = s3
-        score_dict['下缘包含尺桡骨3-5cm'] = s4
-        score_dict['左右最外侧距影像边缘3-5cm'] = s5
+        score_dict['尺桡骨茎突连线中点位于图像正中'] = {'score': s2, '轴1方向差值': gap0, '轴2方向差值': gap1}
+        score_dict['尺桡骨茎突连线与影像纵轴垂直'] = {'score': s3, '纵轴角度': angle_yaxis}
+        score_dict['下缘包含尺桡骨3-5cm'] = {'score': s4, '尺桡骨长度': distance_from_lowest}
+        score_dict['左右最外侧距影像边缘3-5cm'] = {'score': s5, '左侧茎突距离': distance_l, '右侧茎突距离': distance_r}
         
     # LAT
     else:
-        p1 = coordinate[0]
-        p2 = coordinate[1]
-        p3 = coordinate[2]
-        p4 = coordinate[3]
-        p5 = coordinate[4]
+        p1 = actual_coordinate[0]
+        p2 = actual_coordinate[1]
+        p3 = actual_coordinate[2]
+        p4 = actual_coordinate[3]
+        p5 = actual_coordinate[4]
 
-        p1, p2, p3, p4, p5, size = flip_LAT(p1, p2, p3, p4, p5, size)
-
-        s1 = Scaphoid_is_center(p1, PixelSpacing, size)
-        s2 = line_of_LongAxis_is_vertical(p1, p3, p5)
+        s1, gap0, gap1 = Scaphoid_is_center(p1, PixelSpacing, size)
+        s2, angle_yaxis = line_of_LongAxis_is_vertical(p1, p3, p5, size)
         s3 = 9 if overlap else 0
         # s3 = radius_and_ulna_overlap(p2, p3, p4, p5)
-        s4 = distal_radius_and_ulna_overlap(p1, p2, p4)
+        s4, angleP1 = distal_radius_and_ulna_overlap(p1, p2, p4)
         layout_score = s1 + s2 + s3 + s4
 
-        score_dict['舟骨位于图像正中'] = s1
-        score_dict['腕关节长轴与影像长轴平行'] = s2
-        score_dict['尺桡骨重叠'] = s3
-        score_dict['尺桡骨远端重叠'] = s4
+        score_dict['舟骨位于图像正中'] = {'score': s1, '轴1方向差值': gap0, '轴2方向差值': gap1}
+        score_dict['腕关节长轴与影像纵轴平行'] = {'score': s2, '纵轴角度': angle_yaxis}
+        score_dict['尺桡骨重叠'] = True if s3==0 else False
+        score_dict['尺桡骨远端重叠'] = {'score': s4, '远端夹角角度': angleP1}
 
     score_basic = basic_information_completed(df)
     score_dose = dose(df)
     dcm_score = layout_score + score_basic + 0
 
     score_dict['基本信息完整度'] = score_basic
-    score_dict['辐射剂量'] = score_dose
+    score_dict['辐射剂量(<5mGy)'] = score_dose
 
     return dcm_score, score_dict
 
