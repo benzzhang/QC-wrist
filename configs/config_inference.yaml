@@ -1,23 +1,28 @@
 dcmfile_path: ./inference_task/
 save_path : ./inference_result/
 
-arch_classify: MobileNet_v2_onecls
-arch_lanmarks: GLNet 
-local_net: unet_dw
+arch:
+  classify: MobileNet_v2_onecls
+  landmarks: 
+    net: GLNet
+    local_net: unet_dw
 
-num_classes_classify: 2
-num_classes_AP: 3
-num_classes_LAT: 5
+num_classes:
+  classify: 2
+  AP: 3
+  LAT: 5
 
-file_classify_position: model_best_wrist-classify-position.pth.tar
-file_classify_artifact: model_best_wrist-classify-artifact.pth.tar
-file_classify_overlap: model_best_wrist-classify-overlap.pth.tar
-file_landmarks_AP: model_best_wrist-landmarks-AP.pth.tar
-file_landmarks_LAT: model_best_wrist-landmarks-LAT.pth.tar
+checkpoints:
+  classify_position: model_best_wrist-classify-position.pth.tar
+  classify_artifact: model_best_wrist-classify-artifact.pth.tar
+  classify_overlap: model_best_wrist-classify-overlap.pth.tar
+  landmarks_AP: model_best_wrist-landmarks-AP.pth.tar
+  landmarks_LAT: model_best_wrist-landmarks-LAT.pth.tar
 
-size_classify: 
-  W: 960
-  H: 1920
-size_landmarks: 
-  W : 640
-  H : 1280
+input_size:
+  classify:
+    W: 960
+    H: 1920
+  landmarks:
+    W : 640
+    H : 1280

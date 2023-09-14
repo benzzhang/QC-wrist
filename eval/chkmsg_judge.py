@@ -1,7 +1,7 @@
 '''
 Date: 2023-05-26 16:10:41
 LastEditors: zhangjian zhangjian@cecinvestment.com
-LastEditTime: 2023-09-12 14:07:16
+LastEditTime: 2023-09-14 15:14:02
 FilePath: /QC-wrist/eval/chkmsg_judge.py
 Description: 
     4分, 受检者基本信息是否完整? 包含ID号(唯一性)、姓名、性别、出生日期、年龄
@@ -40,5 +40,3 @@ def dose(dcmfile):
             return False
     except:
         return None
-
-

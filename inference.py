@@ -1,7 +1,7 @@
 '''
 Date: 2023-05-26 10:19:09
 LastEditors: zhangjian zhangjian@cecinvestment.com
-LastEditTime: 2023-09-12 16:27:50
+LastEditTime: 2023-09-14 17:58:45
 FilePath: /QC-wrist/inference.py
 Description: 
 '''
@@ -23,18 +23,18 @@ include_radius_ulna, distance_from_StyloidProcess_to_edge, Scaphoid_is_center, l
 basic_information_completed, dose, radius_and_ulna_overlap, distal_radius_and_ulna_overlap, metacarpophalangeal_joint_is_included
 
 
-def init_ai_quality_model():
+def init_ai_model():
     '''
         initial the ai quality model
     '''
     print('Initializing the model at {} ...'.format(time.strftime("%Y-%m-%d %X", time.localtime())))
 
     global use_cuda
-    model_classify_position = models.__dict__[config['arch_classify']](num_classes=config['num_classes_classify'])
-    model_classify_artifact = models.__dict__[config['arch_classify']](num_classes=config['num_classes_classify'])
-    model_classify_overlap = models.__dict__[config['arch_classify']](num_classes=config['num_classes_classify'])
-    model_landmark_AP = models.__dict__[config['arch_lanmarks']](num_classes=config['num_classes_AP'], local_net=config['local_net'])
-    model_landmark_LAT = models.__dict__[config['arch_lanmarks']](num_classes=config['num_classes_LAT'], local_net=config['local_net'])
+    model_classify_position = models.__dict__[config['arch']['classify']](num_classes=config['num_classes']['classify'])
+    model_classify_artifact = models.__dict__[config['arch']['classify']](num_classes=config['num_classes']['classify'])
+    model_classify_overlap = models.__dict__[config['arch']['classify']](num_classes=config['num_classes']['classify'])
+    model_landmark_AP = models.__dict__[config['arch']['landmarks']['net']](num_classes=config['num_classes']['AP'], local_net=config['arch']['landmarks']['local_net'])
+    model_landmark_LAT = models.__dict__[config['arch']['landmarks']['net']](num_classes=config['num_classes']['LAT'], local_net=config['arch']['landmarks']['local_net'])
 
     # 'torch.nn.DataParallel' will load model on the default CUDA
     model_classify_position = torch.nn.DataParallel(model_classify_position)
@@ -44,11 +44,11 @@ def init_ai_quality_model():
     model_landmark_LAT = torch.nn.DataParallel(model_landmark_LAT)
 
     # 'load_state_dict' starting to occupy the memory of GPU
-    model_classify_position.load_state_dict(torch.load(os.path.join('checkpoints/', config['file_classify_position']))['state_dict'], strict=True)
-    model_classify_artifact.load_state_dict(torch.load(os.path.join('checkpoints/', config['file_classify_artifact']))['state_dict'], strict=True)
-    model_classify_overlap.load_state_dict(torch.load(os.path.join('checkpoints/', config['file_classify_overlap']))['state_dict'], strict=True)
-    model_landmark_AP.load_state_dict(torch.load(os.path.join('checkpoints/', config['file_landmarks_AP']))['state_dict'], strict=True)
-    model_landmark_LAT.load_state_dict(torch.load(os.path.join('checkpoints/', config['file_landmarks_LAT']))['state_dict'], strict=True)
+    model_classify_position.load_state_dict(torch.load(os.path.join('checkpoints/', config['checkpoints']['classify_position']))['state_dict'], strict=True)
+    model_classify_artifact.load_state_dict(torch.load(os.path.join('checkpoints/', config['checkpoints']['classify_artifact']))['state_dict'], strict=True)
+    model_classify_overlap.load_state_dict(torch.load(os.path.join('checkpoints/', config['checkpoints']['classify_overlap']))['state_dict'], strict=True)
+    model_landmark_AP.load_state_dict(torch.load(os.path.join('checkpoints/', config['checkpoints']['landmarks_AP']))['state_dict'], strict=True)
+    model_landmark_LAT.load_state_dict(torch.load(os.path.join('checkpoints/', config['checkpoints']['landmarks_LAT']))['state_dict'], strict=True)
 
     use_cuda = torch.cuda.is_available()
     if use_cuda:
@@ -64,11 +64,8 @@ def inference(models, prending_list):
     '''
         evaluate the dicom by check tags completation and ai_quality_model, return the detail scores
     '''
-    models[0].eval()
-    models[1].eval()
-    models[2].eval()
-    models[3].eval()
-    models[4].eval()
+    for model in models:
+        model.eval()
 
     print('start inferencing at {} ...'.format(time.strftime("%Y-%m-%d %X", time.localtime())))
     res_list = []
@@ -80,8 +77,8 @@ def inference(models, prending_list):
         df_pixel = df.pixel_array
         scaled_df_pixel = (df_pixel - min(df_pixel.flatten())) / (max(df_pixel.flatten()) - min(df_pixel.flatten()))
         scaled_df_pixel *= 255
-        resized_df0 = cv2.resize(scaled_df_pixel, (config['size_classify']['W'], config['size_classify']['H']))
-        resized_df1 = cv2.resize(scaled_df_pixel, (config['size_landmarks']['W'], config['size_landmarks']['H']))
+        resized_df0 = cv2.resize(scaled_df_pixel, (config['input_size']['classify']['W'], config['input_size']['classify']['H']))
+        resized_df1 = cv2.resize(scaled_df_pixel, (config['input_size']['landmarks']['W'], config['input_size']['landmarks']['H']))
 
         resized_df0 = np.stack((resized_df0,) * 3, axis=-1)
         resized_df1 = np.stack((resized_df1,) * 3, axis=-1)
@@ -110,9 +107,9 @@ def inference(models, prending_list):
 
         # model inferring
         with torch.no_grad():
-        # classify for artifact
+        # classify for position and artifact
             res_classify_position = models[0](df_tensor0)
-            res_clsaaify_artifact = models[1](df_tensor0)
+            res_classify_artifact = models[1](df_tensor0)
             # judge position & generate landmark
             if ProtocolName == '腕关节正位':
                 flag = 'wrist-landmarks-AP'
@@ -134,10 +131,10 @@ def inference(models, prending_list):
         # release the cache of PyTorch&CUDA
         # torch.cuda.empty_cache()
         '''
-            return: True/False, True/False, List
+            return: True/False, True/False, List, True/False/None
         '''
         result = (res_mark, 
-                  res_clsaaify_artifact[0][0].item() > res_clsaaify_artifact[0][1].item(), 
+                  res_classify_artifact[0][0].item() > res_classify_artifact[0][1].item(), 
                   get_landmarks_from_heatmap(res_landmark.squeeze().detach(), project=flag),
                   res_classify_overlap[0][0].item() > res_classify_overlap[0][1].item() if 'LAT' in flag else None)
         res_list.append(result)
@@ -148,7 +145,7 @@ def inference(models, prending_list):
         size = df_pixel.shape
         actual_coordinate = []
         for c in result[2]:
-            ac = [(c[0]/config['size_landmarks']['H'])*size[0], (c[1]/config['size_landmarks']['W'])*size[1]]
+            ac = [(c[0]/config['input_size']['landmarks']['H'])*size[0], (c[1]/config['input_size']['landmarks']['W'])*size[1]]
             ac = [int(ac[0]), int(ac[1])]
             actual_coordinate.append(ac)
 
@@ -176,7 +173,7 @@ def evaluate_each(dcmfile, coordinate, overlap, score_dict):
 
     actual_coordinate = []
     for c in coordinate:
-        ac = [(c[0]/config['size_landmarks']['H'])*size[0], (c[1]/config['size_landmarks']['W'])*size[1]]
+        ac = [(c[0]/config['input_size']['landmarks']['H'])*size[0], (c[1]/config['input_size']['landmarks']['W'])*size[1]]
         ac = [int(ac[0]), int(ac[1])]
         actual_coordinate.append(ac)
 
@@ -184,9 +181,8 @@ def evaluate_each(dcmfile, coordinate, overlap, score_dict):
         PixelSpacing: (H, W) = (y, x)
         coordinate: (H, W) = (y, x)
         size: (H, W) = (y, x)
-        'needed to reverse them'
     '''
-
+    # AP
     if overlap is None:
         p1 = actual_coordinate[0]
         p2 = actual_coordinate[1]
@@ -248,7 +244,7 @@ def main():
     with open(args.config_file) as f:
         config = yaml.load(f, Loader=yaml.FullLoader)
         
-    models = init_ai_quality_model()
+    models = init_ai_model()
 
     '''
         Obtain a list of files to be inferred
