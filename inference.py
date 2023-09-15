@@ -1,7 +1,7 @@
 '''
 Date: 2023-05-26 10:19:09
 LastEditors: zhangjian zhangjian@cecinvestment.com
-LastEditTime: 2023-09-14 17:58:45
+LastEditTime: 2023-09-15 17:40:51
 FilePath: /QC-wrist/inference.py
 Description: 
 '''
@@ -29,7 +29,6 @@ def init_ai_model():
     '''
     print('Initializing the model at {} ...'.format(time.strftime("%Y-%m-%d %X", time.localtime())))
 
-    global use_cuda
     model_classify_position = models.__dict__[config['arch']['classify']](num_classes=config['num_classes']['classify'])
     model_classify_artifact = models.__dict__[config['arch']['classify']](num_classes=config['num_classes']['classify'])
     model_classify_overlap = models.__dict__[config['arch']['classify']](num_classes=config['num_classes']['classify'])
@@ -51,12 +50,14 @@ def init_ai_model():
     model_landmark_LAT.load_state_dict(torch.load(os.path.join('checkpoints/', config['checkpoints']['landmarks_LAT']))['state_dict'], strict=True)
 
     use_cuda = torch.cuda.is_available()
-    if use_cuda:
-        model_classify_position = model_classify_position.cuda()
-        model_classify_artifact = model_classify_artifact.cuda()
-        model_classify_overlap = model_classify_overlap.cuda()
-        model_landmark_AP = model_landmark_AP.cuda()
-        model_landmark_LAT = model_landmark_LAT.cuda()
+    if not use_cuda:
+        print('CUDA Device not found, exited at {} ...'.format(time.strftime("%Y-%m-%d %X", time.localtime())))
+
+    model_classify_position = model_classify_position.cuda()
+    model_classify_artifact = model_classify_artifact.cuda()
+    model_classify_overlap = model_classify_overlap.cuda()
+    model_landmark_AP = model_landmark_AP.cuda()
+    model_landmark_LAT = model_landmark_LAT.cuda()
     return model_classify_position, model_classify_artifact, model_classify_overlap, model_landmark_AP, model_landmark_LAT
 
 
@@ -91,11 +92,10 @@ def inference(models, prending_list):
         df_tensor0 = torch.FloatTensor(np.expand_dims(resized_df0.transpose((2, 0, 1)), 0))
         df_tensor1 = torch.FloatTensor(np.expand_dims(resized_df1.transpose((2, 0, 1)), 0))
 
-        if use_cuda:
-            df_tensor0 = df_tensor0.cuda()
-            df_tensor1 = df_tensor1.cuda()
-            df_tensor0 = torch.autograd.Variable(df_tensor0)
-            df_tensor1 = torch.autograd.Variable(df_tensor1)
+        df_tensor0 = df_tensor0.cuda()
+        df_tensor1 = df_tensor1.cuda()
+        df_tensor0 = torch.autograd.Variable(df_tensor0)
+        df_tensor1 = torch.autograd.Variable(df_tensor1)
 
         try:
             ProtocolName = df.data_element('ProtocolName').value
