@@ -1,7 +1,7 @@
 '''
 Date: 2023-05-26 10:19:09
 LastEditors: zhangjian zhangjian@cecinvestment.com
-LastEditTime: 2023-09-15 17:40:51
+LastEditTime: 2023-09-19 11:39:58
 FilePath: /QC-wrist/inference.py
 Description: 
 '''
@@ -238,7 +238,7 @@ def main():
     parser = argparse.ArgumentParser(description='workflow of QC in wrist')
     # model related, including  Architecture, path, datasets
     parser.add_argument('--config-file', type=str, default='configs/config_inference.yaml')
-    parser.add_argument('--gpu-id', type=str, default='0')
+    parser.add_argument('--gpu-id', type=str, default='2')
     args = parser.parse_args()
     os.environ["CUDA_VISIBLE_DEVICES"] = args.gpu_id
     with open(args.config_file) as f:
