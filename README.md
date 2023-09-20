@@ -44,11 +44,11 @@ torchvision==0.15.2
 │   └── config_landmarks_LAT.yaml
 ├── data
 │   ├── cp_mv.py
-│   ├── gen_list_meta_position.py       # generate .txt about the name of files and label/coordinates
+│   ├── gen_list_meta_position.py		# generate .txt about the name of files and label/coordinates
 │   ├── gen_list_meta.py
-│   ├── wrist                  		 # folder to save .png & .json
-│   ├── wrist_AP              			 # folder to save .png & .json
-│   └── wrist_LAT              		 # folder to save .png & .json
+│   ├── wrist		        # folder to save .png & .json
+│   ├── wrist_AP		# folder to save .png & .json
+│   └── wrist_LAT		# folder to save .png & .json
 ├── dataset
 │   ├── __init__.py
 │   ├── xray_classify_dataset.py
@@ -58,7 +58,7 @@ torchvision==0.15.2
 │   ├── onnx_model_202307131414.onnx
 │   ├── torch2onnx.py
 │   └── trt_model.trt
-├── eval								 # Scoring by information in checking, mark of position and coordinates
+├── eval		# Scoring by information in checking, mark of position and coordinates
 │   ├── char_recognize.py
 │   ├── chkmsg_judge.py
 │   ├── __init__.py
@@ -84,13 +84,13 @@ torchvision==0.15.2
 │       ├── indicators_of_valid.txt
 │       ├── pred_filenames.txt
 │       └── pred_landmarks.txt
-├── files_from_hos              	 	 # folder to save .dcm
+├── files_from_hos              	 	# folder to save .dcm
 ├── inference.py
 ├── inference_result
 │   ├── DX145789.png
 │   ├── DX148722.png
 │   └── inference.json
-├── inference_task              		 # folder to save .dcm (files needed to be inferred)
+├── inference_task              		# folder to save .dcm (files needed to be inferred)
 │   ├── DX145789.dcm
 │   └── DX148722.dcm
 ├── losses
@@ -123,7 +123,7 @@ torchvision==0.15.2
 │   ├── logger.py
 │   ├── misc.py
 │   └── progress_bar.py
-└── wrist_data_dcm						# after executing 'classify_AP_LAT.py', dcm files will be moved here from 'files_from_hos'
+└── wrist_data_dcm		# after executing 'classify_AP_LAT.py', dcm files will be moved here from 'files_from_hos'
     ├── wrist_AP
     └── wrist_LAT
 
