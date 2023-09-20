@@ -1,5 +1,8 @@
 ## A Quality Control Model for Wrist X-ray Images
-![results](example.png)
+### Visualization of model prediction results
+![prediction](example_infer.png)
+### Visualization of model evaluation results
+![evaluation](example_eval.png)
 ## Introduction
 The project pipeline includes one classification model and two landmarks detection models.  At the same time, we checked the relevant information in the image file and left and right markers on images.   
 classification referring to this paper: [MobileNetV2: Inverted Residuals and Linear Bottlenecks](https://arxiv.org/pdf/1801.04381.pdf)  
@@ -25,49 +28,74 @@ torchvision==0.15.2
 .
 ├── augmentation
 │   ├── __init__.py
-│   ├── medical_augment.py
-├── data
-│   ├── gen_list_meta.py       # generate .txt about the name of files and label/coordinates
-│   ├── wrist                  # folder to save .png & .json
-│   ├── wrist_AP               # folder to save .png & .json
-│   │   ├── DX042323.json
-│   │   ├── DX042323.png
-│   │   ├── ...
-│   │   ├── ...
-│   │   ├── DX162094.json
-│   │   ├── DX162094.png
-│   ├── wrist_LAT              # folder to save .png & .json
-│   │   ├── DX042323.json
-│   │   ├── DX042323.png
-│   │   ├──  ...
-│   │   ├── ...
-│   │   ├── DX162094.json
-│   │   └── DX162094.png
-├── dataset
-│   ├── __init__.py
-│   ├── util.py
-│   ├── xray_classify_dataset.py
-│   └── xray_landmark_dataset.py
-├── eval                        # Scoring by information in checking, mark of position and coordinates
-│   ├── char_recognize.py
-│   ├── chkmsg_judge.py
-│   ├── __init__.py
-│   ├── point_judge.py
-├── experiments
-│   ├── config_classify.yaml
+│   └── medical_augment.py
+├── checkpoints
+│   ├── model_best_wrist-classify-artifact.pth.tar
+│   ├── model_best_wrist-classify-overlap.pth.tar
+│   ├── model_best_wrist-classify-position.pth.tar
+│   ├── model_best_wrist-landmarks-AP.pth.tar
+│   └── model_best_wrist-landmarks-LAT.pth.tar
+├── configs
+│   ├── config_classify_artifact.yaml
+│   ├── config_classify_overlap.yaml
+│   ├── config_classify_position.yaml
 │   ├── config_inference.yaml
 │   ├── config_landmarks_AP.yaml
 │   └── config_landmarks_LAT.yaml
-├── files_from_hos              # folder to save .dcm
+├── data
+│   ├── cp_mv.py
+│   ├── gen_list_meta_position.py       # generate .txt about the name of files and label/coordinates
+│   ├── gen_list_meta.py
+│   ├── wrist                  		 # folder to save .png & .json
+│   ├── wrist_AP              			 # folder to save .png & .json
+│   └── wrist_LAT              		 # folder to save .png & .json
+├── dataset
+│   ├── __init__.py
+│   ├── xray_classify_dataset.py
+│   └── xray_landmark_dataset.py
+├── depoly
+│   ├── infer_with_tensorRT.py
+│   ├── onnx_model_202307131414.onnx
+│   ├── torch2onnx.py
+│   └── trt_model.trt
+├── eval								 # Scoring by information in checking, mark of position and coordinates
+│   ├── char_recognize.py
+│   ├── chkmsg_judge.py
+│   ├── __init__.py
+│   └── point_judge.py
+├── example_eval.png
+├── example_infer.png
+├── experiments
+│   ├── wrist-classify-artifact
+│   │   ├── indicators_of_valid.txt
+│   │   └── log.txt
+│   ├── wrist-classify-overlap
+│   │   ├── indicators_of_valid.txt
+│   │   └── log.txt
+│   ├── wrist-classify-position
+│   │   ├── indicators_of_valid.txt
+│   │   └── log.txt
+│   ├── wrist-landmarks-AP
+│   │   ├── indicators_of_valid.txt
+│   │   ├── log0808.txt
+│   │   ├── pred_filenames.txt
+│   │   └── pred_landmarks.txt
+│   └── wrist-landmarks-LAT
+│       ├── indicators_of_valid.txt
+│       ├── pred_filenames.txt
+│       └── pred_landmarks.txt
+├── files_from_hos              	 	 # folder to save .dcm
 ├── inference.py
 ├── inference_result
-├── inference_task              # folder to save .dcm (files needed to be inferred)
-│   ├── DX045861.dcm
-│   ├── ...
-│   └── DX160969.dcm
+│   ├── DX145789.png
+│   ├── DX148722.png
+│   └── inference.json
+├── inference_task              		 # folder to save .dcm (files needed to be inferred)
+│   ├── DX145789.dcm
+│   └── DX148722.dcm
 ├── losses
 │   ├── __init__.py
-│   ├── loss.py
+│   └── loss.py
 ├── models
 │   ├── densenet.py
 │   ├── GLNet.py
@@ -76,8 +104,10 @@ torchvision==0.15.2
 │   ├── mobilenet.py
 │   ├── resnet.py
 │   └── unet_dw.py
+├── README.md
+├── read_result.py
 ├── requirements.txt
-├── tools                       # some tools
+├── tools
 │   ├── char-L.png
 │   ├── char-R.png
 │   ├── classify_AP_LAT.py
@@ -92,10 +122,10 @@ torchvision==0.15.2
 │   ├── __init__.py
 │   ├── logger.py
 │   ├── misc.py
-│   ├── progress_bar.py
-├── wrist_data_dcm              # after executing 'classify_AP_LAT.py', dcm files will be moved here
-│   ├── wrist_AP
-│   └── wrist_LAT
+│   └── progress_bar.py
+└── wrist_data_dcm						# after executing 'classify_AP_LAT.py', dcm files will be moved here from 'files_from_hos'
+    ├── wrist_AP
+    └── wrist_LAT
 
 ```
 ## Quickly Start

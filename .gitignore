@@ -9,5 +9,6 @@
 !char-R.png
 /.idea/
 /.vscode/
-!example.png
+!example_infer.png
+!example_eval.png
 !inference.json
