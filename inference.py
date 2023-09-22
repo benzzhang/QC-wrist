@@ -1,7 +1,7 @@
 '''
 Date: 2023-05-26 10:19:09
 LastEditors: zhangjian zhangjian@cecinvestment.com
-LastEditTime: 2023-09-22 11:17:56
+LastEditTime: 2023-09-22 16:11:35
 FilePath: /QC-wrist/inference.py
 Description: 
 '''
@@ -74,7 +74,10 @@ def inference(models, prending_list):
         dcmfile = os.path.join(config['dcmfile_path'], i)
         df = pydicom.read_file(dcmfile, force=True)
 
-        df.file_meta.TransferSyntaxUID = pydicom.uid.ImplicitVRLittleEndian
+        if not hasattr(df.file_meta, 'TransferSyntaxUID'):
+            # DICOM defines a default Transfer Syntax, the DICOM Implicit VR Little Endian Transfer Syntax (UID = "1.2.840.10008.1.2 "),
+            # which shall be supported by every conformant DICOM Implementation.
+            df.file_meta.TransferSyntaxUID = pydicom.uid.ImplicitVRLittleEndian
         df_pixel = df.pixel_array
         scaled_df_pixel = (df_pixel - min(df_pixel.flatten())) / (max(df_pixel.flatten()) - min(df_pixel.flatten()))
         scaled_df_pixel *= 255
@@ -161,7 +164,8 @@ def inference(models, prending_list):
 def evaluate_each(dcmfile, coordinate, overlap, score_dict):
     df = pydicom.read_file(dcmfile, force=True)
     
-    df.file_meta.TransferSyntaxUID = pydicom.uid.ImplicitVRLittleEndian
+    if not hasattr(df.file_meta, 'TransferSyntaxUID'):
+        df.file_meta.TransferSyntaxUID = pydicom.uid.ImplicitVRLittleEndian
     size = df.pixel_array.shape
 
     '''

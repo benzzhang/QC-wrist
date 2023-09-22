@@ -19,7 +19,10 @@ def transfer(dst):
             df = pydicom.read_file(dcm_file, force=True)
 
             # 'Implicit VR Little Endian' - 未压缩
-            df.file_meta.TransferSyntaxUID = pydicom.uid.ImplicitVRLittleEndian
+            if not hasattr(df.file_meta, 'TransferSyntaxUID'):
+                # DICOM defines a default Transfer Syntax, the DICOM Implicit VR Little Endian Transfer Syntax (UID = "1.2.840.10008.1.2 "),
+                # which shall be supported by every conformant DICOM Implementation.
+                df.file_meta.TransferSyntaxUID = pydicom.uid.ImplicitVRLittleEndian
             df_pixel = df.pixel_array
 
             scaled_df_pixel = (df_pixel - min(df_pixel.flatten())) / (max(df_pixel.flatten()) - min(df_pixel.flatten()))

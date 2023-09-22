@@ -1,7 +1,7 @@
 '''
 Date: 2023-04-21 10:52:12
 LastEditors: zhangjian zhangjian@cecinvestment.com
-LastEditTime: 2023-09-10 13:13:32
+LastEditTime: 2023-09-22 16:11:34
 FilePath: /QC-wrist/train_landmark.py
 Description: Copyright (c) Pengbo, 2022
             Landmarks detection model, using DATASET 'WristLandmarkMaskDataset'
@@ -307,8 +307,9 @@ def valid(validloader, model, criterion, use_cuda, common_config, scaler=None, v
                         continue
                     dcmfile = os.path.join('/data/experiments/wrist_data_dcm/wrist_'+posture, names[i].replace('png', 'dcm'))
                     df = pydicom.read_file(dcmfile, force=True)
-                    df.file_meta.TransferSyntaxUID = pydicom.uid.ImplicitVRLittleEndian
 
+                    if not hasattr(df.file_meta, 'TransferSyntaxUID'):
+                        df.file_meta.TransferSyntaxUID = pydicom.uid.ImplicitVRLittleEndian
                     size = df.pixel_array.shape
                     PixelSpacing = df.data_element('PixelSpacing').value
                     PixelSpacing = (float(PixelSpacing._list[0]), float(PixelSpacing._list[1]))
