@@ -1,7 +1,7 @@
 '''
 Date: 2023-05-26 10:19:09
 LastEditors: zhangjian zhangjian@cecinvestment.com
-LastEditTime: 2023-09-19 11:39:58
+LastEditTime: 2023-09-22 11:17:56
 FilePath: /QC-wrist/inference.py
 Description: 
 '''
@@ -191,7 +191,11 @@ def evaluate_each(dcmfile, coordinate, overlap, score_dict):
         s1 = metacarpophalangeal_joint_is_included(p1)
         s2, gap0, gap1 = midpoint_of_StyloidProcess_is_center(p2, p3, PixelSpacing, size)
         s3, angle_yaxis = line_of_StyloidProcess_is_horizontal(p2, p3, size)
-        s4, distance_from_lowest = include_radius_ulna(p1, p2, p3, PixelSpacing, size)
+        # 无指掌关节时，会影响下缘方位判断
+        if s1 != 0:
+            s4, distance_from_lowest = include_radius_ulna(p1, p2, p3, PixelSpacing, size)
+        else:
+            s4, distance_from_lowest = 0, 'NaN'
         s5, distance_l, distance_r = distance_from_StyloidProcess_to_edge(p2, p3, PixelSpacing, size)
         layout_score = s1 + s2 + s3 + s4 + s5
         
