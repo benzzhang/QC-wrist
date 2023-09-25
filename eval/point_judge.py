@@ -1,7 +1,7 @@
 '''
 Date: 2023-05-26 14:08:13
 LastEditors: zhangjian zhangjian@cecinvestment.com
-LastEditTime: 2023-09-19 11:45:38
+LastEditTime: 2023-09-25 17:05:30
 FilePath: /QC-wrist/eval/point_judge.py
 Description:
 
@@ -166,12 +166,12 @@ def Scaphoid_is_center(p1, pixelspacing, size):
     if gap0 <= 1:
         score += 4.5
     if 1 < gap0 < 2:
-        score += round(4.5 * (2-gap0), 1)
+        score += int(3 * (2-gap0)) + 1
 
     if gap1 <= 1:
         score += 4.5
     if 1 < gap1 < 2:
-        score += round(4.5 * (2-gap1), 1) 
+        score += int(3 * (2-gap1)) + 1
 
     return score, round(gap0, 3), round(gap1, 3)
 
