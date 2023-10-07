@@ -138,12 +138,18 @@ def visualize_in_evaluate(input, landmarks, pixelspacing):
         :param point_1: 点1坐标
         :param point_2: 点2坐标
         :param point_3: 点3坐标
-        :return: 返回指定角的夹角值
+        : a-Point2 to Point3
+        : b-Point1 to Point3
+        : c-Point1 to Point2
+        :return: 返回角B的夹角值
         """
         a=math.sqrt((point_2[0]-point_3[0])*(point_2[0]-point_3[0])+(point_2[1]-point_3[1])*(point_2[1] - point_3[1]))
         b=math.sqrt((point_1[0]-point_3[0])*(point_1[0]-point_3[0])+(point_1[1]-point_3[1])*(point_1[1] - point_3[1]))
         c=math.sqrt((point_1[0]-point_2[0])*(point_1[0]-point_2[0])+(point_1[1]-point_2[1])*(point_1[1]-point_2[1]))
-        B=math.degrees(math.acos((b*b-a*a-c*c)/(-2*a*c)))
+        try:
+            B=math.degrees(math.acos((b*b-a*a-c*c)/(-2*a*c)))
+        except:
+            return np.NaN
         return B
     
     def calculate_angle_vector(pointA, pointB, pointC):
@@ -306,8 +312,12 @@ def visualize_in_evaluate(input, landmarks, pixelspacing):
             cv2.putText(img, "{:d} deg".format(int(abs(end_angle-start_angle))), ( p1[1]-50, p1[0]-50 ), cv2.FONT_HERSHEY_COMPLEX_SMALL, 1, circle_color, 1) # write angle 
 
         # draw the remote angle, only acute angle
-        angle1 = calculate_angle_vector((p2[1], p2[0]), (p1[1], p1[0]), (img.shape[1], p1[0]))
-        angle2 = calculate_angle_vector((p4[1], p4[0]), (p1[1], p1[0]), (img.shape[1], p1[0]))
+        # if angle not exist, not draw, return img directly
+        angle1 = calculate_angle((p2[1], p2[0]), (p1[1], p1[0]), (img.shape[1], p1[0]))
+        angle2 = calculate_angle((p4[1], p4[0]), (p1[1], p1[0]), (img.shape[1], p1[0]))
+        if np.isnan(angle1) or np.isnan(angle2):
+            cv2.circle(img, (p1[1], p1[0]), 5, (255, 255, 255), -1)
+            return img
         if abs(angle1 - angle2) < 180:
             cv2.ellipse(img, (p1[1], p1[0]), (20, 20), 0, angle1, angle2, eval_color3, 1)
             cv2.putText(img, "{:d} deg".format(int(abs(angle1-angle2))), ( p1[1]-50, p1[0]+50 ), cv2.FONT_HERSHEY_COMPLEX_SMALL, 1, eval_color3, 1) # write angle 

@@ -1,7 +1,7 @@
 '''
 Date: 2023-05-24 14:19:57
 LastEditors: zhangjian zhangjian@cecinvestment.com
-LastEditTime: 2023-05-31 10:53:35
+LastEditTime: 2023-10-07 18:05:40
 FilePath: /QC-wrist/eval/char_recognize.py
 Description: 
 '''
@@ -16,23 +16,22 @@ def image_similarity(image1, image2):
     acc = match.sum() / match.size
     return acc
 
-def is_position_mark(ori_img):
+def is_position_mark(ori_img, name):
     is_existing = False
     # Template for characters
     template_R = 'tools/char-R.png'
     template_L = 'tools/char-L.png'
-
     # Image binarization -> closed operations applied -> comparing connected domains one by one
-    _, th_img = cv2.threshold(ori_img, thresh=200, maxval=255, type=cv2.THRESH_BINARY)
+    _, th_img = cv2.threshold(ori_img, thresh=240, maxval=255, type=cv2.THRESH_BINARY)
 
     kernel = cv2.getStructuringElement(cv2.MORPH_RECT,(5, 5))
     close_img = cv2.morphologyEx(th_img, cv2.MORPH_CLOSE, kernel)
     close_img = close_img.astype(np.uint8)
 
     # 'cv2.connectedComponentsWithStats' requires gray image
-    ret, _, stats, _ = cv2.connectedComponentsWithStats(close_img, connectivity=4)
+    num_labels, _, stats, _ = cv2.connectedComponentsWithStats(close_img, connectivity=4)
 
-    if ret < 1:
+    if num_labels < 1:
         return is_existing
 
     compared_res = []
@@ -41,7 +40,7 @@ def is_position_mark(ori_img):
         if x == y == 0:
             continue
         connected_component = th_img[y:y+h, x:x+w]
-        connected_component = cv2.threshold(cv2.resize(connected_component, (64, 64)), 0, 255, cv2.THRESH_BINARY)[1]
+        connected_component = cv2.threshold(cv2.resize(connected_component, (64, 64)), 200, 255, cv2.THRESH_BINARY)[1]
         # cv2.imwrite(str(idx)+'.png', connected_component)
 
         # if any acc of 'R' or 'L' is greater than 0.90, True will be returned to show the existence of characters

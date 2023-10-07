@@ -1,7 +1,7 @@
 '''
 Date: 2023-05-26 10:19:09
 LastEditors: zhangjian zhangjian@cecinvestment.com
-LastEditTime: 2023-09-22 16:11:35
+LastEditTime: 2023-10-07 18:03:44
 FilePath: /QC-wrist/inference.py
 Description: 
 '''
@@ -79,8 +79,13 @@ def inference(models, prending_list):
             # which shall be supported by every conformant DICOM Implementation.
             df.file_meta.TransferSyntaxUID = pydicom.uid.ImplicitVRLittleEndian
         df_pixel = df.pixel_array
+        if df.data_element('PresentationLUTShape').value == 'INVERSE':
+            max_value = np.max(df_pixel)
+            df_pixel = np.abs(df_pixel.astype(np.int32)-max_value.astype(np.int32))
+
         scaled_df_pixel = (df_pixel - min(df_pixel.flatten())) / (max(df_pixel.flatten()) - min(df_pixel.flatten()))
-        scaled_df_pixel *= 255
+        scaled_df_pixel = scaled_df_pixel*255
+
         resized_df0 = cv2.resize(scaled_df_pixel, (config['input_size']['classify']['W'], config['input_size']['classify']['H']))
         resized_df1 = cv2.resize(scaled_df_pixel, (config['input_size']['landmarks']['W'], config['input_size']['landmarks']['H']))
 
@@ -106,7 +111,7 @@ def inference(models, prending_list):
             ProtocolName = None
 
         # position mark detection
-        res_mark = is_position_mark(scaled_df_pixel)
+        res_mark = is_position_mark(scaled_df_pixel, i)
 
         # model inferring
         with torch.no_grad():
@@ -114,23 +119,23 @@ def inference(models, prending_list):
             res_classify_position = models[0](df_tensor0)
             res_classify_artifact = models[1](df_tensor0)
             # judge position & generate landmark
-            if ProtocolName == '腕关节正位':
+            # if ProtocolName == '腕关节正位':
+            #     flag = 'wrist-landmarks-AP'
+            #     res_landmark = models[3](df_tensor1)
+            # elif ProtocolName == '腕关节侧位':
+            #     flag = 'wrist-landmarks-LAT'
+            #     # in LAT, an classify for overlap
+            #     res_classify_overlap = models[2](df_tensor0)
+            #     res_landmark = models[4](df_tensor1)
+
+            # else:
+            if res_classify_position[0][0].item() > res_classify_position[0][1].item():
                 flag = 'wrist-landmarks-AP'
                 res_landmark = models[3](df_tensor1)
-            elif ProtocolName == '腕关节侧位':
+            else:
                 flag = 'wrist-landmarks-LAT'
-                # in LAT, an classify for overlap
                 res_classify_overlap = models[2](df_tensor0)
                 res_landmark = models[4](df_tensor1)
-
-            else:
-                if res_classify_position[0][0].item() > res_classify_position[0][1].item():
-                    flag = 'wrist-landmarks-AP'
-                    res_landmark = models[3](df_tensor1)
-                else:
-                    flag = 'wrist-landmarks-LAT'
-                    res_classify_overlap = models[2](df_tensor0)
-                    res_landmark = models[4](df_tensor1)
         # release the cache of PyTorch&CUDA
         # torch.cuda.empty_cache()
         '''
@@ -145,19 +150,22 @@ def inference(models, prending_list):
         '''
             generate image which keeping original size with landmarks
         '''
-        size = df_pixel.shape
-        actual_coordinate = []
-        for c in result[2]:
-            ac = [(c[0]/config['input_size']['landmarks']['H'])*size[0], (c[1]/config['input_size']['landmarks']['W'])*size[1]]
-            ac = [int(ac[0]), int(ac[1])]
-            actual_coordinate.append(ac)
+        try:
+            size = df_pixel.shape
+            actual_coordinate = []
+            for c in result[2]:
+                ac = [(c[0]/config['input_size']['landmarks']['H'])*size[0], (c[1]/config['input_size']['landmarks']['W'])*size[1]]
+                ac = [int(ac[0]), int(ac[1])]
+                actual_coordinate.append(ac)
 
-        PixelSpacing = df.data_element('PixelSpacing').value
-        PixelSpacing = [float(PixelSpacing._list[0]), float(PixelSpacing._list[1])]
-        img = visualize_in_evaluate(input=cv2.merge([scaled_df_pixel, scaled_df_pixel, scaled_df_pixel]),
-                                        landmarks=actual_coordinate,
-                                        pixelspacing=PixelSpacing)
-        cv2.imwrite(os.path.join(config['save_path'], i.replace('dcm', 'png')), img)
+            PixelSpacing = df.data_element('PixelSpacing').value
+            PixelSpacing = [float(PixelSpacing._list[0]), float(PixelSpacing._list[1])]
+            img = visualize_in_evaluate(input=cv2.merge([scaled_df_pixel, scaled_df_pixel, scaled_df_pixel]),
+                                            landmarks=actual_coordinate,
+                                            pixelspacing=PixelSpacing)
+            cv2.imwrite(os.path.join(config['save_path'], i.replace('dcm', 'png')), img)
+        except:
+            print('an exception occurred in generating images - ', str(i))
 
     return res_list
 

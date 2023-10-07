@@ -1,7 +1,7 @@
 '''
 Date: 2023-05-26 14:08:13
 LastEditors: zhangjian zhangjian@cecinvestment.com
-LastEditTime: 2023-09-25 17:05:30
+LastEditTime: 2023-10-07 18:05:54
 FilePath: /QC-wrist/eval/point_judge.py
 Description:
 
@@ -52,17 +52,26 @@ def line_of_StyloidProcess_is_horizontal(p1, p2, size):
            abs(p1[1] - p2[1])]
 
     if size[0] >= size[1]:
-        angle_yaxis = np.rad2deg(math.atan(vec[1] / vec[0]))
+        try:
+            angle_yaxis = np.rad2deg(math.atan(vec[0] / vec[1]))
+        except:
+            angle_yaxis = np.NaN
     else:
-        angle_yaxis = np.rad2deg(math.atan(vec[0] / vec[1]))
+        try:
+            angle_yaxis = np.rad2deg(math.atan(vec[1] / vec[0]))
+        except:
+            angle_yaxis = np.NaN
 
     score = 0
-    if int(angle_yaxis) >= 85:
-        score = 10
-    if 80 < angle_yaxis < 85:
-        score = int( 9 * (angle_yaxis-80)/5 ) + 1
-    return score, int(angle_yaxis)
-
+    if not np.isnan(angle_yaxis):
+        if int(angle_yaxis) <= 5:
+            score = 10
+        if 5 < angle_yaxis < 10:
+            score = int( 9 * (10-angle_yaxis)/5 ) + 1
+        return score, int(angle_yaxis)
+    else:
+        return 0, 'NaN'
+    
 '''
     下缘是否包含尺桡骨3-5cm
 '''
@@ -190,18 +199,26 @@ def line_of_LongAxis_is_vertical(p1, p2, p3, size):
            abs(p1[1] - lat_proximal[1])]
 
     if size[0] >= size[1]:
-        angle_yaxis = np.rad2deg(math.atan(vec[1] / vec[0]))
+        try:
+            angle_yaxis = np.rad2deg(math.atan(vec[1] / vec[0]))
+        except:
+            angle_yaxis = np.NaN
     else:
-        angle_yaxis = np.rad2deg(math.atan(vec[0] / vec[1]))
-
+        try:
+            angle_yaxis = np.rad2deg(math.atan(vec[0] / vec[1]))
+        except:
+            angle_yaxis = np.NaN
+            
     score = 0
-    if 0 <= int(angle_yaxis) <= 5:
-        score = 9
-    if 5 < int(angle_yaxis) <10:
-        score = int(8 * (10 - angle_yaxis) / 5) + 1
-
-    return score, int(angle_yaxis)
-
+    if not np.isnan(angle_yaxis):
+        if 0 <= int(angle_yaxis) <= 5:
+            score = 9
+        if 5 < int(angle_yaxis) <10:
+            score = int(8 * (10 - angle_yaxis) / 5) + 1
+        return score, int(angle_yaxis)
+    else:
+        return 0, 'NaN'
+    
 '''
     尺桡骨重叠(abandoned)
 '''
@@ -249,11 +266,17 @@ def distal_radius_and_ulna_overlap(p1, p2, p3):
     a=math.sqrt((p2[0]-p3[0])*(p2[0]-p3[0])+(p2[1]-p3[1])*(p2[1] - p3[1]))
     b=math.sqrt((p1[0]-p3[0])*(p1[0]-p3[0])+(p1[1]-p3[1])*(p1[1] - p3[1]))
     c=math.sqrt((p1[0]-p2[0])*(p1[0]-p2[0])+(p1[1]-p2[1])*(p1[1]-p2[1]))
-    angleA=math.degrees(math.acos((a*a-b*b-c*c)/(-2*b*c)))
+    try:
+        angleA=math.degrees(math.acos((a*a-b*b-c*c)/(-2*b*c)))
+    except:
+        angleA=np.NaN
 
     score = 0
-    if angleA <= 45:
-        score = 9
-    if 45 < angleA < 60:
-        score = int(8 * (60-angleA) / 15) + 1
-    return score, math.ceil(angleA)
+    if not np.isnan(angleA):
+        if angleA <= 45:
+            score = 9
+        if 45 < angleA < 60:
+            score = int(8 * (60-angleA) / 15) + 1
+        return score, math.ceil(angleA)
+    else:
+        return 0, 'NaN'
