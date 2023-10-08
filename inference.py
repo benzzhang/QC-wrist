@@ -1,7 +1,7 @@
 '''
 Date: 2023-05-26 10:19:09
 LastEditors: zhangjian zhangjian@cecinvestment.com
-LastEditTime: 2023-10-07 18:03:44
+LastEditTime: 2023-10-08 09:46:52
 FilePath: /QC-wrist/inference.py
 Description: 
 '''
@@ -80,10 +80,12 @@ def inference(models, prending_list):
             df.file_meta.TransferSyntaxUID = pydicom.uid.ImplicitVRLittleEndian
         df_pixel = df.pixel_array
         if df.data_element('PresentationLUTShape').value == 'INVERSE':
-            max_value = np.max(df_pixel)
-            df_pixel = np.abs(df_pixel.astype(np.int32)-max_value.astype(np.int32))
-
-        scaled_df_pixel = (df_pixel - min(df_pixel.flatten())) / (max(df_pixel.flatten()) - min(df_pixel.flatten()))
+            max_value = np.max(df_pixel) # the value of max is 65535, represent the position word
+            second_max_value = sorted(list(set(df_pixel.flatten())), reverse=True)[1]
+            df_pixel = np.abs(df_pixel.astype(np.int32) - second_max_value)
+            scaled_df_pixel = (df_pixel - min(df_pixel.flatten())) / (second_max_value - min(df_pixel.flatten()))
+        else:
+            scaled_df_pixel = (df_pixel - min(df_pixel.flatten())) / (max(df_pixel.flatten()) - min(df_pixel.flatten()))
         scaled_df_pixel = scaled_df_pixel*255
 
         resized_df0 = cv2.resize(scaled_df_pixel, (config['input_size']['classify']['W'], config['input_size']['classify']['H']))
@@ -165,7 +167,7 @@ def inference(models, prending_list):
                                             pixelspacing=PixelSpacing)
             cv2.imwrite(os.path.join(config['save_path'], i.replace('dcm', 'png')), img)
         except:
-            print('an exception occurred in generating images - ', str(i))
+            print('an exception occurred in generating images -', str(i))
 
     return res_list
 

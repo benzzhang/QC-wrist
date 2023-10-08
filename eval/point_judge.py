@@ -1,7 +1,7 @@
 '''
 Date: 2023-05-26 14:08:13
 LastEditors: zhangjian zhangjian@cecinvestment.com
-LastEditTime: 2023-10-07 18:05:54
+LastEditTime: 2023-10-08 12:48:10
 FilePath: /QC-wrist/eval/point_judge.py
 Description:
 
