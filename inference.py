@@ -1,7 +1,7 @@
 '''
 Date: 2023-05-26 10:19:09
 LastEditors: zhangjian zhangjian@cecinvestment.com
-LastEditTime: 2023-10-08 09:46:52
+LastEditTime: 2023-10-13 17:46:08
 FilePath: /QC-wrist/inference.py
 Description: 
 '''
@@ -118,6 +118,11 @@ def inference(models, prending_list):
         # model inferring
         with torch.no_grad():
         # classify for position and artifact
+            '''
+                对体位分类是一件困难的事情QAQ:
+                1.依赖模型做区分准确率会不够 
+                2.依赖DICOM TAG信息的(理应如此), 此信息实际上也不是准确的
+            '''
             res_classify_position = models[0](df_tensor0)
             res_classify_artifact = models[1](df_tensor0)
             # judge position & generate landmark
@@ -167,7 +172,7 @@ def inference(models, prending_list):
                                             pixelspacing=PixelSpacing)
             cv2.imwrite(os.path.join(config['save_path'], i.replace('dcm', 'png')), img)
         except:
-            print('an exception occurred in generating images -', str(i))
+            print('an exception occurred in generating images during visualizing-', str(i))
 
     return res_list
 
