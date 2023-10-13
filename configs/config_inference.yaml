@@ -1,5 +1,5 @@
-dcmfile_path: /data/inference_task/test
-save_path : /data/inference_result/wrist_AP_eval
+dcmfile_path: /data/inference_task/wrist_LAT_eval
+save_path : /data/inference_result/wrist_LAT_eval
 
 arch:
   classify: MobileNet_v2_onecls

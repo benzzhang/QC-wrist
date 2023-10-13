@@ -13,4 +13,3 @@
 /.vscode/
 !example_infer.png
 !example_eval.png
-!inference.json
