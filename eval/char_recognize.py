@@ -1,7 +1,7 @@
 '''
 Date: 2023-05-24 14:19:57
 LastEditors: zhangjian zhangjian@cecinvestment.com
-LastEditTime: 2023-10-08 12:55:09
+LastEditTime: 2023-10-18 14:00:34
 FilePath: /QC-wrist/eval/char_recognize.py
 Description: 
 '''
@@ -57,7 +57,7 @@ def is_position_mark(ori_img, name):
         compared_res.append(max(acc1, acc2, acc3, acc4))
 
     for acc in compared_res:
-        if acc > 0.90:
+        if acc > 0.85:
             is_existing = True
             break
     
