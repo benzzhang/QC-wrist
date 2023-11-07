@@ -1,7 +1,7 @@
 '''
 Date: 2023-05-26 14:08:13
 LastEditors: zhangjian zhangjian@cecinvestment.com
-LastEditTime: 2023-10-08 12:48:10
+LastEditTime: 2023-11-07 11:25:09
 FilePath: /QC-wrist/eval/point_judge.py
 Description:
 
@@ -173,14 +173,14 @@ def Scaphoid_is_center(p1, pixelspacing, size):
     
     score = 0
     if gap0 <= 1:
-        score += 4.5
+        score += 6
     if 1 < gap0 < 2:
-        score += int(3 * (2-gap0)) + 1
+        score += int(5 * (2-gap0)) + 1
 
     if gap1 <= 1:
-        score += 4.5
+        score += 6
     if 1 < gap1 < 2:
-        score += int(3 * (2-gap1)) + 1
+        score += int(5 * (2-gap1)) + 1
 
     return score, round(gap0, 3), round(gap1, 3)
 
@@ -212,9 +212,9 @@ def line_of_LongAxis_is_vertical(p1, p2, p3, size):
     score = 0
     if not np.isnan(angle_yaxis):
         if 0 <= int(angle_yaxis) <= 5:
-            score = 9
+            score = 12
         if 5 < int(angle_yaxis) <10:
-            score = int(8 * (10 - angle_yaxis) / 5) + 1
+            score = int(11 * (10 - angle_yaxis) / 5) + 1
         return score, int(angle_yaxis)
     else:
         return 0, 'NaN'
@@ -274,9 +274,9 @@ def distal_radius_and_ulna_overlap(p1, p2, p3):
     score = 0
     if not np.isnan(angleA):
         if angleA <= 45:
-            score = 9
+            score = 12
         if 45 < angleA < 60:
-            score = int(8 * (60-angleA) / 15) + 1
+            score = int(11 * (60-angleA) / 15) + 1
         return score, math.ceil(angleA)
     else:
         return 0, 'NaN'

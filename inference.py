@@ -1,7 +1,7 @@
 '''
 Date: 2023-05-26 10:19:09
 LastEditors: zhangjian zhangjian@cecinvestment.com
-LastEditTime: 2023-10-13 17:46:08
+LastEditTime: 2023-11-07 14:13:35
 FilePath: /QC-wrist/inference.py
 Description: 
 '''
@@ -234,14 +234,14 @@ def evaluate_each(dcmfile, coordinate, overlap, score_dict):
 
         s1, gap0, gap1 = Scaphoid_is_center(p1, PixelSpacing, size)
         s2, angle_yaxis = line_of_LongAxis_is_vertical(p1, p3, p5, size)
-        s3 = 9 if overlap else 0
+        # s3 = 9 if overlap else 0
         # s3 = radius_and_ulna_overlap(p2, p3, p4, p5)
         s4, angleP1 = distal_radius_and_ulna_overlap(p1, p2, p4)
-        layout_score = s1 + s2 + s3 + s4
+        layout_score = s1 + s2 + s4
 
         score_dict['舟骨位于图像正中'] = {'score': s1, '轴1方向差值': gap0, '轴2方向差值': gap1}
         score_dict['腕关节长轴与影像纵轴平行'] = {'score': s2, '纵轴角度': angle_yaxis}
-        score_dict['尺桡骨重叠'] = True if s3==0 else False
+        # score_dict['尺桡骨重叠'] = True if s3==9 else False
         score_dict['尺桡骨远端重叠'] = {'score': s4, '远端夹角角度': angleP1}
 
     score_basic = basic_information_completed(df)
@@ -261,7 +261,7 @@ def main():
     parser = argparse.ArgumentParser(description='workflow of QC in wrist')
     # model related, including  Architecture, path, datasets
     parser.add_argument('--config-file', type=str, default='configs/config_inference.yaml')
-    parser.add_argument('--gpu-id', type=str, default='2')
+    parser.add_argument('--gpu-id', type=str, default='1,2,3')
     args = parser.parse_args()
     os.environ["CUDA_VISIBLE_DEVICES"] = args.gpu_id
     with open(args.config_file) as f:
