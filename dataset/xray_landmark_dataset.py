@@ -12,9 +12,6 @@ import math
 import sys
 import torch
 from torch.utils.data import Dataset
-# current_dir=os.path.dirname(os.path.abspath(inspect.getfile(inspect.currentframe())))
-# os.chdir(current_dir)
-# sys.path.append('../')
 from utils import gaussianHeatmap, rotate, translate, get_landmarks_from_heatmap, merge_hm
 import albumentations as A
 

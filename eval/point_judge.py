@@ -1,7 +1,7 @@
 '''
 Date: 2023-05-26 14:08:13
 LastEditors: zhangjian zhangjian@cecinvestment.com
-LastEditTime: 2023-11-07 11:25:09
+LastEditTime: 2023-11-14 15:06:39
 FilePath: /QC-wrist/eval/point_judge.py
 Description:
 
@@ -185,7 +185,7 @@ def Scaphoid_is_center(p1, pixelspacing, size):
     return score, round(gap0, 3), round(gap1, 3)
 
 '''
-    腕关节长轴是否与影像纵轴平行(两轴所夹锐角<10°)
+    腕关节长轴是否与影像纵轴平行(两轴所夹锐角<5°)
     · 如果两条线段之间的夹角在 0 到 5 度之间，可以认为它们非常接近平行。
     · 如果夹角在 5 到 10 度之间，可以认为它们相对平行，但可能有轻微的偏离。
     · 如果夹角在 10 到 15 度之间，可以认为它们大致平行，但具有一定程度的偏离。

@@ -108,9 +108,14 @@ torchvision==0.15.2
 ├── read_result.py
 ├── requirements.txt
 ├── tools
-│   ├── char-L.png
-│   ├── char-R.png
+│   ├── char-L0.png
+│   ├── char-L1.png
+│   ├── char-R0.png
+│   ├── char-R1.png
+│   ├── manual_evaluation_AP.xlsx
 │   ├── classify_AP_LAT.py
+│   ├── compare_manual_model_AP.py
+│   ├── compare_manual_model_LAT.py
 │   ├── dcm2png.py
 │   ├── find_range.py
 │   └── form_matched_image.py
