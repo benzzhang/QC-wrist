@@ -1,7 +1,7 @@
 '''
 Date: 2023-05-24 14:19:57
 LastEditors: zhangjian zhangjian@cecinvestment.com
-LastEditTime: 2023-10-18 14:00:34
+LastEditTime: 2024-02-19 15:24:46
 FilePath: /QC-wrist/eval/char_recognize.py
 Description: 
 '''
@@ -9,12 +9,26 @@ Description:
 import cv2
 import os
 import numpy as np
+import easyocr
 
 # Calculate the similarity of images
 def image_similarity(image1, image2):
     match = image1 == image2
     acc = match.sum() / match.size
     return acc
+
+def is_position_mark_api(ori_img):
+    is_existing = False
+    # image = Image.fromarray(np.uint8(ori_img))
+    reader = easyocr.Reader(['en'], gpu=True)
+    results = reader.readtext(ori_img.astype(np.uint8))
+
+    for detection in results:
+        if detection[1] == 'R' or detection[1] == 'L':
+            is_existing = True
+            # print(detection)
+            break
+    return is_existing
 
 def is_position_mark(ori_img, name):
     is_existing = False

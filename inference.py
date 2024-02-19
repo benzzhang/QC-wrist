@@ -1,7 +1,7 @@
 '''
 Date: 2023-05-26 10:19:09
 LastEditors: zhangjian zhangjian@cecinvestment.com
-LastEditTime: 2023-11-07 14:13:35
+LastEditTime: 2024-02-19 15:21:24
 FilePath: /QC-wrist/inference.py
 Description: 
 '''
@@ -18,7 +18,7 @@ import cv2
 
 import models
 from utils import get_landmarks_from_heatmap, visualize_in_evaluate
-from eval import is_position_mark, midpoint_of_StyloidProcess_is_center, line_of_LongAxis_is_vertical,\
+from eval import is_position_mark_api, is_position_mark, midpoint_of_StyloidProcess_is_center, line_of_LongAxis_is_vertical,\
 include_radius_ulna, distance_from_StyloidProcess_to_edge, Scaphoid_is_center, line_of_StyloidProcess_is_horizontal,\
 basic_information_completed, dose, radius_and_ulna_overlap, distal_radius_and_ulna_overlap, metacarpophalangeal_joint_is_included
 
@@ -113,7 +113,8 @@ def inference(models, prending_list):
             ProtocolName = None
 
         # position mark detection
-        res_mark = is_position_mark(scaled_df_pixel, i)
+        # res_mark = is_position_mark(scaled_df_pixel, i)
+        res_mark = is_position_mark_api(scaled_df_pixel)
 
         # model inferring
         with torch.no_grad():
